@@ -8,8 +8,15 @@ chown agent:agent /home/agent/.ssh/authorized_keys
 
 # --- GCS service account key ---
 echo "$GCS_SA_KEY" > /tmp/gcs-key.json
-chmod 600 /tmp/gcs-key.json
+chmod 640 /tmp/gcs-key.json
+chown root:agent /tmp/gcs-key.json
 export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcs-key.json
+
+# --- Default backup interval (overridable via env) ---
+export BACKUP_INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-300}"
+
+# --- Enable FUSE allow_other ---
+echo "user_allow_other" >> /etc/fuse.conf
 
 # --- Mount GCS (project-scoped, read-write) ---
 mkdir -p /mnt/gcs /mnt/shared
@@ -17,6 +24,7 @@ gcsfuse \
     --key-file=/tmp/gcs-key.json \
     --uid=$(id -u agent) --gid=$(id -g agent) \
     --implicit-dirs \
+    -o allow_other \
     --only-dir="projects/${PROJECT_ID}" \
     "${GCS_BUCKET}" /mnt/gcs 2>/dev/null || echo "gcsfuse project mount failed (expected without real GCS)"
 
@@ -25,7 +33,7 @@ gcsfuse \
     --key-file=/tmp/gcs-key.json \
     --uid=$(id -u agent) --gid=$(id -g agent) \
     --implicit-dirs \
-    -o ro \
+    -o ro,allow_other \
     --only-dir="shared" \
     "${GCS_BUCKET}" /mnt/shared 2>/dev/null || echo "gcsfuse shared mount failed (expected without real GCS)"
 
