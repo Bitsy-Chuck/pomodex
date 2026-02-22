@@ -1,0 +1,31 @@
+FROM docker:27-dind
+
+# Install Squid, iptables, tc, Python, and test dependencies
+RUN apk add --no-cache \
+    squid \
+    iptables \
+    ip6tables \
+    iproute2 \
+    python3 \
+    py3-pip \
+    curl \
+    bash
+
+# Install Python test dependencies
+RUN pip3 install --break-system-packages pytest pytest-timeout docker
+
+# Squid base config
+RUN mkdir -p /etc/squid/conf.d /etc/squid/acls
+COPY backend/terminal_proxy/tests/integration/squid.conf /etc/squid/squid.conf
+# Seed an empty placeholder so the glob include has at least one match
+RUN touch /etc/squid/conf.d/placeholder.conf
+
+# Copy the source code and tests
+COPY . /app
+WORKDIR /app
+
+# Entrypoint: start dockerd + squid, then run tests
+COPY backend/terminal_proxy/tests/integration/entrypoint-test.sh /entrypoint-test.sh
+RUN chmod +x /entrypoint-test.sh
+
+ENTRYPOINT ["/entrypoint-test.sh"]
