@@ -75,18 +75,50 @@ gcloud services enable \
     artifactregistry.googleapis.com
 ```
 
-## 8. (Future) Artifact Registry Setup
+## 8. Artifact Registry Setup (M5)
+
+### Create repository
 
 ```bash
 gcloud artifacts repositories create sandboxes \
     --repository-format=docker \
     --location=europe-west1 \
+    --project=pomodex-fd2bcd \
     --description="Sandbox container snapshots"
+```
+
+### Grant writer + reader roles to Project Service SA
+
+```bash
+gcloud artifacts repositories add-iam-policy-binding sandboxes \
+    --location=europe-west1 \
+    --project=pomodex-fd2bcd \
+    --member="serviceAccount:pomodex-project-service@pomodex-fd2bcd.iam.gserviceaccount.com" \
+    --role="roles/artifactregistry.writer"
 
 gcloud artifacts repositories add-iam-policy-binding sandboxes \
     --location=europe-west1 \
+    --project=pomodex-fd2bcd \
     --member="serviceAccount:pomodex-project-service@pomodex-fd2bcd.iam.gserviceaccount.com" \
-    --role="roles/artifactregistry.writer"
+    --role="roles/artifactregistry.reader"
+```
+
+### Configure cleanup policy — keep last 5 versions per image
+
+```bash
+cat > /tmp/ar-cleanup-policy.json << 'EOF'
+[
+  {
+    "name": "keep-last-5",
+    "action": {"type": "Keep"},
+    "mostRecentVersions": {"keepCount": 5}
+  }
+]
+EOF
+gcloud artifacts repositories set-cleanup-policies sandboxes \
+    --location=europe-west1 \
+    --project=pomodex-fd2bcd \
+    --policy=/tmp/ar-cleanup-policy.json
 ```
 
 ## 9. (Future) GCP Firewall Rules
@@ -105,6 +137,8 @@ gcloud compute firewall-rules create allow-platform \
 | `roles/iam.serviceAccountAdmin` | Create/delete per-project service accounts |
 | `roles/iam.serviceAccountKeyAdmin` | Create/delete SA JSON keys |
 | `roles/storage.admin` (on bucket) | Set conditional IAM bindings on the bucket |
+| `roles/artifactregistry.writer` (on sandboxes repo) | Push snapshot images |
+| `roles/artifactregistry.reader` (on sandboxes repo) | Pull snapshot images for restore |
 
 ## Key Files
 
