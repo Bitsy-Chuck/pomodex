@@ -50,14 +50,16 @@ Includes audit logging and connection management.
 ## Deliverables
 
 ```
-backend/terminal-proxy/
+backend/terminal_proxy/
   proxy.py                          # Main WebSocket server
   services/auth.py                  # JWT validation via Project Service HTTP
   services/container_lookup.py      # Docker SDK container IP lookup
   services/audit.py                 # Audit logging
-  tests/integration/test_proxy.py
-  tests/unit/test_url_parsing.py
-  tests/unit/test_auth.py
+  tests/conftest.py                 # Auto-marks integration tests
+  tests/integration/conftest.py     # Mock services + proxy fixtures
+  tests/integration/test_proxy.py   # T7.2-T7.15
+  tests/unit/test_url_parsing.py    # T7.1
+  tests/unit/test_auth.py           # Auth client unit tests
   Dockerfile
 ```
 
@@ -224,9 +226,55 @@ backend/terminal-proxy/
 
 ## Acceptance Criteria
 
-- [ ] All 15 test cases pass
+- [x] All 15 test cases pass (23 total: 9 unit + 14 integration)
 - [ ] Proxy handles 10 concurrent connections without errors
 - [ ] Connection establishment < 500ms (auth + lookup + ttyd connect)
-- [ ] No resource leaks on disconnect (tasks, sockets, file handles)
-- [ ] Audit log is tamper-proof (written from proxy, not from sandbox)
-- [ ] Binary data (terminal escape sequences, UTF-8) forwarded correctly
+- [x] No resource leaks on disconnect (tasks, sockets, file handles)
+- [x] Audit log is tamper-proof (written from proxy, not from sandbox)
+- [x] Binary data (terminal escape sequences, UTF-8) forwarded correctly
+
+---
+
+## Implementation Decisions
+
+### ttyd WebSocket Protocol
+
+ttyd 1.7.7 uses a custom WebSocket protocol that the proxy transparently forwards.
+The frontend (xterm.js) and ttyd speak this protocol directly through the proxy.
+
+**Handshake:**
+1. Client must use the `tty` WebSocket subprotocol
+2. Client sends `{"AuthToken": ""}` as the first message (empty when no auth configured)
+3. Server responds with title (type `1`), preferences (type `2`), then terminal output (type `0`)
+
+**Message types (ASCII character prefixes, not binary bytes):**
+
+| Direction | Prefix | Meaning |
+|-----------|--------|---------|
+| Client → Server | `'0'` (0x30) | Terminal input (stdin) |
+| Client → Server | `'1'` (0x31) | Resize: `1{"columns":80,"rows":24}` |
+| Client → Server | `'2'` (0x32) | Pause output |
+| Client → Server | `'3'` (0x33) | Resume output |
+| Client → Server | `'{'` (0x7B) | JSON data |
+| Server → Client | `'0'` (0x30) | Terminal output (contains ANSI escape sequences) |
+| Server → Client | `'1'` (0x31) | Window title |
+| Server → Client | `'2'` (0x32) | Preferences |
+
+**Key insight:** Prefixes are ASCII characters (`'0'` = 0x30), NOT binary bytes (`\x00` = 0x00).
+The proxy does not parse these — it forwards all messages bidirectionally as-is.
+
+### Container creation for Docker tests
+
+T7.11 creates containers using `docker_manager.create_container()` utilities (same as production)
+with all required env vars (`GCS_BUCKET`, `GCS_SA_KEY`, etc.). The sandbox image's supervisord
+crashes without these. The test publishes ttyd's port 7681 to the host since Docker Desktop on
+macOS cannot reach container bridge IPs directly — in production, the proxy runs inside Docker
+and uses bridge IPs.
+
+### Module-level imports for testability
+
+`proxy.py` uses `from .services import container_lookup` (module import) instead of
+`from .services.container_lookup import get_container_ip` (direct import). This allows
+test fixtures to `patch.object(lookup_mod, "get_container_ip", ...)` and have the patch
+take effect in the handler. Direct imports bind the function to the importing module's
+namespace, making patches on the source module invisible to the importer.
