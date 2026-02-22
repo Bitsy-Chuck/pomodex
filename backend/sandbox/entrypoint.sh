@@ -1,6 +1,18 @@
 #!/bin/bash
 set -e
 
+# --- Signal handling ---
+# Forward SIGTERM to child processes so Docker stop works during init.
+# Once supervisord takes over via exec, it handles signals itself.
+_term() {
+    echo "SIGTERM during init, shutting down children..."
+    # Kill all child processes of PID 1
+    kill $(jobs -p) 2>/dev/null
+    wait 2>/dev/null
+    exit 0
+}
+trap _term SIGTERM SIGINT
+
 # --- SSH key ---
 echo "$SSH_PUBLIC_KEY" > /home/agent/.ssh/authorized_keys
 chmod 600 /home/agent/.ssh/authorized_keys
@@ -26,7 +38,8 @@ gcsfuse \
     --implicit-dirs \
     -o allow_other \
     --only-dir="projects/${PROJECT_ID}" \
-    "${GCS_BUCKET}" /mnt/gcs 2>/dev/null || echo "gcsfuse project mount failed (expected without real GCS)"
+    "${GCS_BUCKET}" /mnt/gcs 2>/dev/null &
+wait $! 2>/dev/null || echo "gcsfuse project mount failed (expected without real GCS)"
 
 # --- Mount shared GCS (read-only) ---
 gcsfuse \
@@ -35,7 +48,8 @@ gcsfuse \
     --implicit-dirs \
     -o ro,allow_other \
     --only-dir="shared" \
-    "${GCS_BUCKET}" /mnt/shared 2>/dev/null || echo "gcsfuse shared mount failed (expected without real GCS)"
+    "${GCS_BUCKET}" /mnt/shared 2>/dev/null &
+wait $! 2>/dev/null || echo "gcsfuse shared mount failed (expected without real GCS)"
 
 # --- First-boot restore from GCS ---
 INIT_FLAG="/home/agent/.sandbox_initialized"

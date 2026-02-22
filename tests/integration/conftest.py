@@ -167,11 +167,20 @@ def fresh_volume_container(docker_client, sandbox_image, gcs_sa_key, project_id)
 
 
 @pytest.fixture(autouse=True)
-def cleanup_gcs_test_prefix(gcs_client, project_id):
-    """Clean up GCS objects created during tests after each test."""
+def cleanup_gcs_test_prefix(request):
+    """Clean up GCS objects created during tests after each test.
+
+    Silently skips cleanup when GCS credentials are not available
+    (e.g. when running M4-only Docker lifecycle tests).
+    """
     yield
+    try:
+        gcs_client = request.getfixturevalue("gcs_client")
+        pid = request.getfixturevalue("project_id")
+    except Exception:
+        return
     bucket = gcs_client.bucket(GCS_BUCKET)
-    blobs = list(bucket.list_blobs(prefix=f"projects/{project_id}/"))
+    blobs = list(bucket.list_blobs(prefix=f"projects/{pid}/"))
     for blob in blobs:
         blob.delete()
 
@@ -248,17 +257,74 @@ def created_sa_tracker():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def cleanup_created_sas(gcp_project):
-    """Delete all SAs created during the test session, including IAM bindings."""
+def cleanup_created_sas():
+    """Delete all SAs created during the test session, including IAM bindings.
+
+    Silently skips cleanup when gcp_iam is not available
+    (e.g. when running M4-only Docker lifecycle tests).
+    """
     yield
-    from backend.project_service.services.gcp_iam import delete_service_account
+    if not _created_sa_emails:
+        return
+    try:
+        from backend.project_service.services.gcp_iam import delete_service_account
+    except ImportError:
+        return
 
     for email in _created_sa_emails:
         try:
             delete_service_account(
-                email, gcp_project,
+                email, GCP_PROJECT,
                 credentials_path=GCS_KEY_PATH,
                 bucket=GCS_BUCKET,
             )
         except Exception:
             pass  # Best-effort cleanup
+
+
+# ---------------------------------------------------------------------------
+# M4: Docker lifecycle fixtures
+# ---------------------------------------------------------------------------
+
+M4_CONTAINER_PREFIX = "m4-test"
+
+
+@pytest.fixture()
+def m4_project_id():
+    """Unique project ID for each M4 test."""
+    return f"m4-{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture()
+def m4_container_config(gcs_sa_key):
+    """Standard container config for M4 tests."""
+    return {
+        "image": IMAGE_NAME,
+        "gcs_bucket": GCS_BUCKET,
+        "gcs_sa_key": gcs_sa_key,
+        "ssh_public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeTestKey test@test",
+    }
+
+
+@pytest.fixture(autouse=False)
+def m4_cleanup(docker_client):
+    """Track and clean up all Docker resources created during M4 tests.
+
+    Usage: append project IDs to the returned list. Cleanup runs after test.
+    """
+    project_ids = []
+    yield project_ids
+    for pid in project_ids:
+        for name, getter, force in [
+            (f"sandbox-{pid}", docker_client.containers, True),
+            (f"vol-{pid}", docker_client.volumes, True),
+            (f"net-{pid}", docker_client.networks, False),
+        ]:
+            try:
+                obj = getter.get(name)
+                if force:
+                    obj.remove(force=True)
+                else:
+                    obj.remove()
+            except Exception:
+                pass

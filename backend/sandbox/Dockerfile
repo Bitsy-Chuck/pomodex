@@ -56,4 +56,6 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 
 EXPOSE 22 7681
 
+STOPSIGNAL SIGTERM
+
 ENTRYPOINT ["/entrypoint.sh"]

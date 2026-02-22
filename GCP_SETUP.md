@@ -112,3 +112,21 @@ gcloud compute firewall-rules create allow-platform \
 |------|---------|
 | `secrets/gcs-test-key.json` | Project Service SA key (for running IAM operations) |
 | `.env` | Environment variables (GCP_PROJECT, GCS_BUCKET, etc.) |
+
+## Docker Daemon Configuration
+
+Configure Docker to allocate /24 subnets for bridge networks (default is /16, which exhausts address space after ~15 networks).
+
+**Docker Desktop (dev):** Settings > Docker Engine, add to JSON:
+
+**Linux (production):** Edit `/etc/docker/daemon.json`:
+
+```json
+{
+  "default-address-pools": [
+    {"base": "172.16.0.0/12", "size": 24}
+  ]
+}
+```
+
+Restart Docker after applying. Supports up to 4,096 concurrent bridge networks.
