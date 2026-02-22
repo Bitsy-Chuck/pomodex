@@ -1,0 +1,8 @@
+services:
+  testvm:
+    build:
+      context: ../../../..
+      dockerfile: backend/terminal_proxy/tests/integration/Dockerfile.testvm
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=
