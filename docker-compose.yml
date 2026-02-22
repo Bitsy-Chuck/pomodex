@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  project-service:
+    build: ./backend/project_service
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://pomodex:pomodex@postgres:5432/sandboxes"
+      JWT_SECRET: "${JWT_SECRET}"
+      GCS_BUCKET: "${GCS_BUCKET:-pomodex-fd2bcd-sandbox}"
+      GCP_PROJECT: "${GCP_PROJECT:-pomodex-fd2bcd}"
+      GOOGLE_APPLICATION_CREDENTIALS: "/secrets/project-service-sa.json"
+      SANDBOX_IMAGE: "${SANDBOX_IMAGE:-agent-sandbox:latest}"
+      HOST_IP: "${HOST_IP:-0.0.0.0}"
+      TERMINAL_PROXY_PORT: "9000"
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./secrets/project-service-sa.json:/secrets/project-service-sa.json:ro
+    networks:
+      - platform-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sandboxes
+      POSTGRES_USER: pomodex
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-pomodex}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - platform-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pomodex -d sandboxes"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  terminal-proxy:
+    build: ./backend/terminal_proxy
+    network_mode: host
+    pid: "host"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      PROJECT_SERVICE_URL: "http://localhost:8000"
+      PROXY_PORT: "9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/squid/acls:/etc/squid/acls
+      - /etc/squid/conf.d:/etc/squid/conf.d
+    depends_on:
+      - project-service
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  platform-net:
+    name: platform-net
