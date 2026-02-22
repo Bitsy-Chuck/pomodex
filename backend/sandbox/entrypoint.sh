@@ -31,35 +31,25 @@ export BACKUP_INTERVAL_SECONDS="${BACKUP_INTERVAL_SECONDS:-300}"
 echo "user_allow_other" >> /etc/fuse.conf
 
 # --- Mount GCS (project-scoped, read-write) ---
-mkdir -p /mnt/gcs /mnt/shared
+mkdir -p /mnt/gcs
 gcsfuse \
     --key-file=/tmp/gcs-key.json \
     --uid=$(id -u agent) --gid=$(id -g agent) \
     --implicit-dirs \
     -o allow_other \
-    --only-dir="projects/${PROJECT_ID}" \
+    --only-dir="${PROJECT_ID}" \
     "${GCS_BUCKET}" /mnt/gcs 2>/dev/null &
 wait $! 2>/dev/null || echo "gcsfuse project mount failed (expected without real GCS)"
-
-# --- Mount shared GCS (read-only) ---
-gcsfuse \
-    --key-file=/tmp/gcs-key.json \
-    --uid=$(id -u agent) --gid=$(id -g agent) \
-    --implicit-dirs \
-    -o ro,allow_other \
-    --only-dir="shared" \
-    "${GCS_BUCKET}" /mnt/shared 2>/dev/null &
-wait $! 2>/dev/null || echo "gcsfuse shared mount failed (expected without real GCS)"
 
 # --- First-boot restore from GCS ---
 INIT_FLAG="/home/agent/.sandbox_initialized"
 if [ ! -f "$INIT_FLAG" ]; then
     echo "First boot: checking for GCS backup..."
-    if rclone ls ":gcs:${GCS_BUCKET}/projects/${PROJECT_ID}/workspace" \
+    if rclone ls ":gcs:${GCS_BUCKET}/${PROJECT_ID}/workspace" \
        --contimeout=5s --timeout=10s 2>/dev/null | grep -q .; then
         echo "Backup found — restoring..."
         rclone sync \
-            ":gcs:${GCS_BUCKET}/projects/${PROJECT_ID}/workspace" \
+            ":gcs:${GCS_BUCKET}/${PROJECT_ID}/workspace" \
             /home/agent \
             --transfers=8 --checksum
     else

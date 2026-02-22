@@ -67,6 +67,8 @@ async def create_project(
     try:
         project = await svc.create_project(uuid.UUID(user_id), req.name, db)
     except Exception as e:
+        import logging
+        logging.getLogger(__name__).exception("create_project failed")
         raise HTTPException(status_code=500, detail=str(e))
     return _project_detail(project)
 

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from backend.project_service.models.database import Project
+from backend.project_service.models.database import Project, User
 from backend.project_service.services.auth_service import decode_access_token
 
 pytestmark = pytest.mark.asyncio
@@ -25,6 +25,17 @@ async def _register_and_login(client, email="user@example.com"):
     return {"Authorization": f"Bearer {data['access_token']}"}, user_id
 
 
+async def _set_user_gcp(db, user_id):
+    """Helper: set GCP fields on a User row (simulates provisioned user)."""
+    from sqlalchemy import select
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    user = result.scalar_one()
+    user.gcs_bucket = "test-bucket"
+    user.gcp_sa_email = "sa@test.iam"
+    user.gcp_sa_key = '{"type":"service_account"}'
+    await db.commit()
+
+
 class TestListProjects:
 
     async def test_list_only_own_projects(self, client, db):
@@ -36,7 +47,7 @@ class TestListProjects:
             p = Project(
                 user_id=uuid.UUID(uid), name=name, status="running",
                 ssh_public_key="pub", ssh_private_key="priv",
-                gcs_prefix=f"projects/{uuid.uuid4()}",
+                gcs_prefix=f"{uuid.uuid4()}/workspace",
             )
             db.add(p)
         await db.commit()
@@ -53,11 +64,12 @@ class TestCreateProject:
 
     async def test_create_project(self, client, db):
         """T8.11: Create returns 201 with project details, container running."""
-        headers, _ = await _register_and_login(client, "creator@example.com")
+        headers, user_id = await _register_and_login(client, "creator@example.com")
 
         with patch("backend.project_service.services.project_service.gcp_iam") as mock_iam, \
              patch("backend.project_service.services.project_service.docker_mgr") as mock_docker:
 
+            mock_iam.make_bucket_name.return_value = "test-bucket"
             mock_iam.create_service_account.return_value = "sa@test.iam"
             mock_iam.create_sa_key.return_value = '{"type":"service_account"}'
             mock_docker.create_container.return_value = ("cid-123", 30001)
@@ -86,7 +98,7 @@ class TestGetProject:
         project = Project(
             user_id=uuid.UUID(user_id), name="Detail Test", status="running",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x", ssh_host_port=30001,
+            gcs_prefix=f"{uuid.uuid4()}/workspace", ssh_host_port=30001,
         )
         db.add(project)
         await db.commit()
@@ -108,7 +120,7 @@ class TestGetProject:
         project = Project(
             user_id=uuid.UUID(user_a_id), name="Owner's Project", status="running",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
         )
         db.add(project)
         await db.commit()
@@ -127,8 +139,7 @@ class TestStopProject:
         project = Project(
             user_id=uuid.UUID(user_id), name="To Stop", status="running",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x", container_id="cid",
-            gcp_sa_key='{"type":"service_account"}',
+            gcs_prefix=f"{uuid.uuid4()}/workspace", container_id="cid",
         )
         db.add(project)
         await db.commit()
@@ -153,12 +164,12 @@ class TestStartProject:
     async def test_start_stopped_project(self, client, db):
         """T8.15: Start restores a stopped project."""
         headers, user_id = await _register_and_login(client, "starter@example.com")
+        await _set_user_gcp(db, user_id)
 
         project = Project(
             user_id=uuid.UUID(user_id), name="To Start", status="stopped",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x", snapshot_image="registry/img:latest",
-            gcp_sa_key='{"type":"service_account"}',
+            gcs_prefix=f"{uuid.uuid4()}/workspace", snapshot_image="registry/img:latest",
         )
         db.add(project)
         await db.commit()
@@ -177,15 +188,15 @@ class TestStartProject:
 class TestDeleteProject:
 
     async def test_delete_full_teardown(self, client, db):
-        """T8.16: Delete removes all resources and DB record."""
+        """T8.16: Delete removes Docker resources, GCS prefix, and DB record."""
         headers, user_id = await _register_and_login(client, "deleter@example.com")
+        await _set_user_gcp(db, user_id)
         from sqlalchemy import select as sa_select
 
         project = Project(
             user_id=uuid.UUID(user_id), name="To Delete", status="running",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x", container_id="cid",
-            gcp_sa_email="sa@test.iam",
+            gcs_prefix=f"{uuid.uuid4()}/workspace", container_id="cid",
         )
         db.add(project)
         await db.commit()
@@ -200,7 +211,7 @@ class TestDeleteProject:
 
         assert resp.status_code == 200
         mock_docker.cleanup_project_resources.assert_called_once()
-        mock_iam.delete_service_account.assert_called_once()
+        mock_iam.delete_gcs_prefix.assert_called_once()
         mock_snap.delete_snapshot_images.assert_called_once()
 
         result = await db.execute(sa_select(Project).where(Project.id == pid))
@@ -216,8 +227,7 @@ class TestSnapshotProject:
         project = Project(
             user_id=uuid.UUID(user_id), name="To Snap", status="running",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x", container_id="cid",
-            gcp_sa_key='{"type":"service_account"}',
+            gcs_prefix=f"{uuid.uuid4()}/workspace", container_id="cid",
         )
         db.add(project)
         await db.commit()
@@ -242,12 +252,12 @@ class TestRestoreProject:
     async def test_restore_from_snapshot(self, client, db):
         """T8.18: Restore starts container from snapshot image."""
         headers, user_id = await _register_and_login(client, "restorer@example.com")
+        await _set_user_gcp(db, user_id)
 
         project = Project(
             user_id=uuid.UUID(user_id), name="To Restore", status="stopped",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x", snapshot_image="registry/proj:latest",
-            gcp_sa_key='{"type":"service_account"}',
+            gcs_prefix=f"{uuid.uuid4()}/workspace", snapshot_image="registry/proj:latest",
         )
         db.add(project)
         await db.commit()
@@ -271,7 +281,7 @@ class TestBackupStatus:
         project = Project(
             user_id=uuid.UUID(user_id), name="Backup Check", status="running",
             ssh_public_key="pub", ssh_private_key="priv",
-            gcs_prefix="projects/x",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
             last_backup_at=datetime.now(timezone.utc),
             snapshot_image="registry/proj:latest",
             last_snapshot_at=datetime.now(timezone.utc),
@@ -298,6 +308,7 @@ class TestErrorHandling:
         with patch("backend.project_service.services.project_service.gcp_iam") as mock_iam, \
              patch("backend.project_service.services.project_service.docker_mgr") as mock_docker:
 
+            mock_iam.make_bucket_name.return_value = "test-bucket"
             mock_iam.create_service_account.return_value = "sa@test.iam"
             mock_iam.create_sa_key.return_value = '{"type":"service_account"}'
             mock_docker.create_container.side_effect = RuntimeError("Docker daemon unreachable")
@@ -310,7 +321,8 @@ class TestErrorHandling:
 
         assert resp.status_code == 500
         mock_docker.cleanup_project_resources.assert_called_once()
-        mock_iam.delete_service_account.assert_called_once()
+        # SA is NOT deleted on failed create (per-user, reusable)
+        mock_iam.delete_service_account.assert_not_called()
 
         result = await db.execute(sa_select(Project).where(Project.name == "Will Fail"))
         project = result.scalar_one()
@@ -324,7 +336,8 @@ class TestErrorHandling:
         with patch("backend.project_service.services.project_service.gcp_iam") as mock_iam, \
              patch("backend.project_service.services.project_service.docker_mgr") as mock_docker:
 
-            mock_iam.create_service_account.side_effect = RuntimeError("GCP API error")
+            mock_iam.make_bucket_name.return_value = "test-bucket"
+            mock_iam.create_bucket.side_effect = RuntimeError("GCP API error")
 
             resp = await client.post(
                 "/projects",
@@ -333,8 +346,8 @@ class TestErrorHandling:
             )
 
         assert resp.status_code == 500
-        mock_docker.cleanup_project_resources.assert_called_once()
 
         result = await db.execute(sa_select(Project).where(Project.name == "GCP Fail"))
-        project = result.scalar_one()
-        assert project.status == "error"
+        # GCP failure happens before DB insert, so no project row
+        project = result.scalar_one_or_none()
+        assert project is None or project.status == "error"

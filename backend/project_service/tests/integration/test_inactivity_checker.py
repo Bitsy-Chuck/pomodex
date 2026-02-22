@@ -19,8 +19,8 @@ async def _insert_project(db, user_id, name, status, last_connection_at):
     p = Project(
         user_id=user_id, name=name, status=status,
         ssh_public_key="pub", ssh_private_key="priv",
-        gcs_prefix=f"projects/{uuid.uuid4()}",
-        container_id="cid", gcp_sa_key='{"type":"sa"}',
+        gcs_prefix=f"{uuid.uuid4()}/workspace",
+        container_id="cid",
         last_connection_at=last_connection_at,
     )
     db.add(p)

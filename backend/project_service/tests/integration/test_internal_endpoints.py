@@ -48,7 +48,7 @@ class TestInternalValidate:
             status="running",
             ssh_public_key="ssh-ed25519 AAAA",
             ssh_private_key="-----BEGIN OPENSSH PRIVATE KEY-----",
-            gcs_prefix=f"projects/{uuid.uuid4()}",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
         )
         db.add(project)
         await db.commit()
@@ -85,7 +85,7 @@ class TestInternalValidate:
             status="running",
             ssh_public_key="ssh-ed25519 AAAA",
             ssh_private_key="-----BEGIN OPENSSH PRIVATE KEY-----",
-            gcs_prefix=f"projects/{uuid.uuid4()}",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
         )
         db.add(project)
         await db.commit()

@@ -121,7 +121,27 @@ gcloud artifacts repositories set-cleanup-policies sandboxes \
     --policy=/tmp/ar-cleanup-policy.json
 ```
 
-## 9. (Future) GCP Firewall Rules
+## 9. Auto-Created SA via Docker Compose
+
+`docker compose up` runs an init service that auto-creates a second SA (`project-service-sa`) using the host's gcloud credentials. See `scripts/init-gcp-sa.sh`. It grants:
+
+| Role | Purpose |
+|------|---------|
+| `roles/iam.serviceAccountAdmin` | Create/delete per-project SAs at runtime |
+| `roles/iam.serviceAccountKeyAdmin` | Create/delete per-project SA JSON keys |
+| `roles/storage.admin` | GCS bucket access for project storage |
+| `roles/artifactregistry.writer` (on sandboxes repo) | Push snapshot images |
+
+The SA key is stored in the `secrets-data` Docker volume at `/secrets/project-service-sa.json`. A JWT signing secret is also generated at `/secrets/jwt-secret`.
+
+To force regeneration:
+```bash
+docker compose down
+docker volume rm pomodex_secrets-data
+docker compose up
+```
+
+## 10. (Future) GCP Firewall Rules
 
 ```bash
 gcloud compute firewall-rules create allow-platform \
@@ -130,7 +150,11 @@ gcloud compute firewall-rules create allow-platform \
     --description="SSH + Project Service + Terminal Proxy + sandbox SSH ports"
 ```
 
-## Summary of SA Roles
+## Summary of Service Accounts
+
+### `pomodex-project-service` (manual, see steps 4-6)
+
+Created manually for tests and direct gcloud usage.
 
 | Role | Purpose |
 |------|---------|
@@ -140,11 +164,24 @@ gcloud compute firewall-rules create allow-platform \
 | `roles/artifactregistry.writer` (on sandboxes repo) | Push snapshot images |
 | `roles/artifactregistry.reader` (on sandboxes repo) | Pull snapshot images for restore |
 
+### `project-service-sa` (auto-created, see step 9)
+
+Created automatically by `docker compose up` via `scripts/init-gcp-sa.sh`.
+
+| Role | Purpose |
+|------|---------|
+| `roles/iam.serviceAccountAdmin` | Create/delete per-project service accounts |
+| `roles/iam.serviceAccountKeyAdmin` | Create/delete per-project SA JSON keys |
+| `roles/storage.admin` | GCS bucket access |
+| `roles/artifactregistry.writer` (on sandboxes repo) | Push snapshot images |
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `secrets/gcs-test-key.json` | Project Service SA key (for running IAM operations) |
+| `secrets/gcs-test-key.json` | Manual SA key (for tests) |
+| `secrets-data` volume: `project-service-sa.json` | Auto-created SA key (used by docker-compose) |
+| `secrets-data` volume: `jwt-secret` | Auto-generated JWT signing key |
 | `.env` | Environment variables (GCP_PROJECT, GCS_BUCKET, etc.) |
 
 ## Docker Daemon Configuration

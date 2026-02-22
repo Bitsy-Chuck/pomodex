@@ -33,6 +33,11 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # GCP (per-user bucket + SA)
+    gcs_bucket = Column(Text)
+    gcp_sa_email = Column(Text)
+    gcp_sa_key = Column(Text)
+
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
@@ -63,8 +68,6 @@ class Project(Base):
     ssh_private_key = Column(Text, nullable=False)
 
     # GCP
-    gcp_sa_email = Column(Text)
-    gcp_sa_key = Column(Text)
     gcs_prefix = Column(Text, nullable=False)
 
     # Snapshot

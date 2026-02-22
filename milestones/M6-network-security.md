@@ -335,6 +335,41 @@ backend/terminal-proxy/
 
 ---
 
+## Implementation Notes
+
+### Directory structure
+
+M6 creates `backend/terminal-proxy/` and `backend/terminal-proxy/services/network_manager.py`.
+This sets up the directory for M7 (Terminal Proxy WebSocket server) to build on — M7 adds
+`proxy.py` and the rest of the Terminal Proxy code to this same directory.
+
+### Testing strategy — Docker VM
+
+Integration tests (T6.1–T6.18, T6.20–T6.21) require Linux-only tools: iptables, ip6tables,
+tc, Squid, and Docker-in-Docker. These cannot run on macOS.
+
+**Local testing approach**: Run a privileged Docker container as a "VM" that has:
+- Docker daemon (Docker-in-Docker)
+- Squid installed and running
+- iptables/ip6tables available
+- tc available
+
+This container acts as the host VM. The network_manager.py code runs inside it and
+creates sandbox containers (Docker-in-Docker). The same setup deploys to GCP VMs later
+with no code changes — only the outer container goes away.
+
+**Unit tests** (T6.19, T6.22) run locally on any platform — they test config generation,
+atomic writes, and default domain lists with no host dependencies.
+
+### Serialization lock
+
+The serialization lock lives in `network_manager.py` as a `threading.Lock`. The Terminal
+Proxy (M7) will call network_manager functions from its asyncio event loop using
+`asyncio.to_thread()` or `loop.run_in_executor()`, which naturally bridges the
+threading lock to async context.
+
+---
+
 ## Accepted Risks (v1)
 
 **DNS tunneling**: Container can encode data in DNS queries via Docker's embedded

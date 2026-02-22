@@ -80,7 +80,7 @@ def snapshot_project(project_id: str, sa_key_path: str = GCS_KEY_PATH_DEFAULT) -
     exit_code, output = container.exec_run(
         [
             "rclone", "sync", "/home/agent",
-            f":gcs:{gcs_bucket}/projects/{project_id}/workspace",
+            f":gcs:{gcs_bucket}/{project_id}/workspace",
             "--transfers=8", "--checksum",
             "--gcs-service-account-file=/tmp/gcs-key.json",
             "--gcs-bucket-policy-only",
@@ -158,7 +158,7 @@ def restore_from_snapshot(
         environment={
             "PROJECT_ID": str(project_id),
             "GCS_BUCKET": config["gcs_bucket"],
-            "GCS_PREFIX": f"projects/{project_id}",
+            "GCS_PREFIX": str(project_id),
             "GCS_SA_KEY": config["gcs_sa_key"],
             "SSH_PUBLIC_KEY": config["ssh_public_key"],
         },
@@ -216,7 +216,7 @@ def restore_from_gcs(
         environment={
             "PROJECT_ID": str(project_id),
             "GCS_BUCKET": config["gcs_bucket"],
-            "GCS_PREFIX": f"projects/{project_id}",
+            "GCS_PREFIX": str(project_id),
             "GCS_SA_KEY": config["gcs_sa_key"],
             "SSH_PUBLIC_KEY": config["ssh_public_key"],
         },

@@ -18,7 +18,7 @@ while True:
         result = subprocess.run(
             [
                 "rclone", "sync", "/home/agent",
-                f":gcs:{BUCKET}/projects/{PREFIX}/workspace",
+                f":gcs:{BUCKET}/{PREFIX}/workspace",
                 "--transfers=4", "--checksum",
             ],
             capture_output=True,

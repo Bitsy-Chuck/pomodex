@@ -8,7 +8,15 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 
-JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-production")
+def _load_jwt_secret() -> str:
+    """Load JWT secret from file (preferred) or env var."""
+    secret_file = os.environ.get("JWT_SECRET_FILE", "/secrets/jwt-secret")
+    if os.path.isfile(secret_file):
+        return open(secret_file).read().strip()
+    return os.environ.get("JWT_SECRET", "dev-secret-change-in-production")
+
+
+JWT_SECRET = _load_jwt_secret()
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRY_MINUTES = 15
 REFRESH_TOKEN_BYTES = 32

@@ -1,26 +1,38 @@
 version: "3.9"
 
 services:
+  init-gcp-secrets:
+    image: google/cloud-sdk:slim
+    volumes:
+      - secrets-data:/secrets
+      - ${HOME}/.config/gcloud:/host-gcloud:ro
+      - ./scripts:/scripts:ro
+    environment:
+      GCP_PROJECT: "${GCP_PROJECT:-pomodex-fd2bcd}"
+      GCS_BUCKET: "${GCS_BUCKET:-pomodex-fd2bcd-sandbox}"
+    entrypoint: ["bash", "/scripts/init-gcp-sa.sh"]
+
   project-service:
     build: ./backend/project_service
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: "postgresql+asyncpg://pomodex:pomodex@postgres:5432/sandboxes"
-      JWT_SECRET: "${JWT_SECRET}"
       GCS_BUCKET: "${GCS_BUCKET:-pomodex-fd2bcd-sandbox}"
       GCP_PROJECT: "${GCP_PROJECT:-pomodex-fd2bcd}"
       GOOGLE_APPLICATION_CREDENTIALS: "/secrets/project-service-sa.json"
       SANDBOX_IMAGE: "${SANDBOX_IMAGE:-agent-sandbox:latest}"
-      HOST_IP: "${HOST_IP:-0.0.0.0}"
+      HOST_IP: "${HOST_IP:-localhost}"
       TERMINAL_PROXY_PORT: "9000"
       CORS_ORIGINS: "${CORS_ORIGINS:-*}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./secrets/project-service-sa.json:/secrets/project-service-sa.json:ro
+      - secrets-data:/secrets:ro
     networks:
       - platform-net
     depends_on:
+      init-gcp-secrets:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     restart: unless-stopped
@@ -44,23 +56,27 @@ services:
 
   terminal-proxy:
     build: ./backend/terminal_proxy
-    network_mode: host
-    pid: "host"
-    cap_add:
-      - NET_ADMIN
+    container_name: terminal-proxy
+    ports:
+      - "9000:9000"
     environment:
-      PROJECT_SERVICE_URL: "http://localhost:8000"
+      PROJECT_SERVICE_URL: "http://project-service:8000"
       PROXY_PORT: "9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/squid/acls:/etc/squid/acls
-      - /etc/squid/conf.d:/etc/squid/conf.d
+      - secrets-data:/secrets:ro
+    networks:
+      - platform-net
     depends_on:
-      - project-service
+      init-gcp-secrets:
+        condition: service_completed_successfully
+      project-service:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
   postgres-data:
+  secrets-data:
 
 networks:
   platform-net:

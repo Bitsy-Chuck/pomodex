@@ -129,7 +129,7 @@ def create_container(project_id: str, config: dict) -> tuple:
                     environment={
                         "PROJECT_ID": str(project_id),
                         "GCS_BUCKET": config["gcs_bucket"],
-                        "GCS_PREFIX": f"projects/{project_id}",
+                        "GCS_PREFIX": str(project_id),
                         "GCS_SA_KEY": config["gcs_sa_key"],
                         "SSH_PUBLIC_KEY": config["ssh_public_key"],
                     },
@@ -160,6 +160,43 @@ def create_container(project_id: str, config: dict) -> tuple:
             except Exception:
                 pass
         raise
+
+
+TERMINAL_PROXY_CONTAINER = "terminal-proxy"
+
+
+def connect_proxy_to_network(project_id: str) -> None:
+    """Connect the terminal-proxy container to a sandbox's network.
+
+    This allows the proxy to reach ttyd inside the sandbox via bridge IP.
+    Idempotent — silently succeeds if already connected.
+    """
+    client = _get_client()
+    network_name = f"net-{project_id}"
+    try:
+        network = client.networks.get(network_name)
+        network.connect(TERMINAL_PROXY_CONTAINER)
+    except APIError as e:
+        if "already exists" in str(e).lower():
+            pass  # Already connected
+        else:
+            raise
+
+
+def disconnect_proxy_from_network(project_id: str) -> None:
+    """Disconnect the terminal-proxy from a sandbox's network. Idempotent."""
+    client = _get_client()
+    network_name = f"net-{project_id}"
+    try:
+        network = client.networks.get(network_name)
+        network.disconnect(TERMINAL_PROXY_CONTAINER)
+    except NotFound:
+        pass  # Network already gone
+    except APIError as e:
+        if "is not connected" in str(e).lower():
+            pass  # Already disconnected
+        else:
+            raise
 
 
 def start_container(project_id: str) -> None:
