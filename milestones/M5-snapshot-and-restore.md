@@ -44,15 +44,23 @@ existing volume) and the fallback path (fresh base image + GCS restore).
 **Out of scope:**
 - Inactivity detection (M8 — background task in Project Service)
 - API endpoints for snapshot/restore (M8)
+- DB persistence (M8 — functions return metadata dicts, M8 wires persistence)
+
+**Implementation decisions:**
+- AR Docker auth: Programmatic `docker login` using SA key JSON (`_json_key` username). No manual `gcloud auth configure-docker` required.
+- DB fields: Functions return metadata dicts. M8 persists them.
+- T5.11 (cleanup policy): Removed from tests. Infra-only, configured via `gcloud`, verified manually.
 
 ---
 
 ## Deliverables
 
 ```
-backend/project-service/
+backend/project_service/
   services/snapshot_manager.py    # commit, push, pull, restore logic
-  tests/integration/test_snapshot.py
+tests/
+  integration/test_snapshot.py
+  unit/test_snapshot_logic.py     # T5.9 image selection unit test
 
 # GCP
 - Artifact Registry repository "sandboxes" with cleanup policy
@@ -65,11 +73,13 @@ backend/project-service/
 1. Create Artifact Registry repository `sandboxes` (GCP step 7)
 2. Grant Project Service SA `artifactregistry.writer` role (GCP step 8)
 3. Configure cleanup policy — keep last 5 tags per project (GCP step 9)
+   - **Note:** Policy is infra-only (async on Google's schedule). No test — verified manually once.
 4. Implement `snapshot_project(project_id)`:
    - Run final rclone sync inside container
    - `docker commit` → tag with timestamp + latest
+   - Authenticate Docker to AR programmatically using SA key JSON (`docker login` with `_json_key` username) — no manual `gcloud auth configure-docker` needed
    - Push both tags to Artifact Registry
-   - Update DB fields (snapshot_image, last_snapshot_at)
+   - Return metadata dict (`snapshot_image`, `last_snapshot_at`, `status`) — DB persistence deferred to M8
 5. Implement `restore_from_snapshot(project_id)`:
    - Pull snapshot image from Artifact Registry
    - Create new container from snapshot image
@@ -163,23 +173,26 @@ backend/project-service/
 - `last-minute.txt` exists in GCS (was synced before commit)
 - `last_backup_at` timestamp is updated
 
-### T5.8: Snapshot updates DB fields
-**Type**: Integration (Docker + DB)
+### T5.8: Snapshot returns correct metadata
+**Type**: Integration (Docker)
 **Steps**:
 1. Trigger snapshot for a project
-2. Query project record from DB
+2. Inspect returned metadata dict
 **Assert**:
 - `snapshot_image` is set to `{registry}/{project_id}:latest`
-- `last_snapshot_at` is set to current time
-- `status` transitions: running → snapshotting → stopped
+- `last_snapshot_at` is set to current time (within tolerance)
+- `status` is `"stopped"`
+- **Note:** DB persistence deferred to M8. This test verifies the function returns
+  correct metadata that M8's API layer will persist.
 
 ### T5.9: Restore determines correct image
 **Type**: Unit test
 **Steps**:
-1. Project with `snapshot_image` set → should use snapshot image
-2. Project with `snapshot_image` = NULL → should use base image
+1. Call with `snapshot_image` set → should return snapshot image
+2. Call with `snapshot_image` = None → should return base image
 **Assert**:
-- Logic correctly selects image source based on DB field
+- Logic correctly selects image source based on `snapshot_image` parameter
+- **Note:** No DB dependency. Pure function that takes `snapshot_image` arg and returns the image to use.
 
 ### T5.10: Delete snapshot images from Artifact Registry
 **Type**: Integration (Docker + GCP)
@@ -191,14 +204,11 @@ backend/project-service/
 - No images remain for that project ID
 - Other projects' images are unaffected
 
-### T5.11: Cleanup policy keeps only 5 latest tags
-**Type**: Integration (GCP)
-**Steps**:
-1. Push 7 snapshot tags for the same project (different timestamps)
-2. Wait for cleanup policy to run (or trigger manually)
-**Assert**:
-- Only the 5 most recent tags remain
-- Oldest 2 tags are deleted
+### ~~T5.11: Cleanup policy keeps only 5 latest tags~~ — REMOVED
+**Reason**: AR cleanup policies run asynchronously on Google's schedule. There is
+no API to trigger or wait for them, making this untestable in CI/integration.
+The cleanup policy is configured via `gcloud` during GCP setup (documented in
+`GCP_SETUP.md`) and verified manually once.
 
 ### T5.12: Snapshot of large container (performance)
 **Type**: Performance test
@@ -207,7 +217,7 @@ backend/project-service/
 2. Measure time for: commit + push
 **Assert**:
 - Document the timing (commit time, push time, total)
-- Total should be < 5 minutes for reasonable image sizes
+- Total should be < 1 minute for reasonable image sizes
 
 ### T5.13: Container stop after snapshot
 **Type**: Integration (Docker)
@@ -217,14 +227,14 @@ backend/project-service/
 **Assert**:
 - Container is stopped and removed
 - Volume still exists
-- Status in DB is "stopped"
+- Returned metadata has `status` = `"stopped"`
 
 ---
 
 ## Acceptance Criteria
 
 - [ ] Artifact Registry repository created with cleanup policy
-- [ ] All 13 test cases pass
+- [ ] All 12 test cases pass (T5.11 removed — AR cleanup policy is infra-only)
 - [ ] Fast restore creates a fully functional container from snapshot in < 60 seconds
 - [ ] Fallback restore works when volume is lost
 - [ ] No data loss — final rclone sync always completes before commit
