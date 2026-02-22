@@ -35,8 +35,9 @@ RUN curl https://rclone.org/install.sh | bash
 # Claude Code (requires Node.js)
 RUN npm install -g @anthropic-ai/claude-code
 
-# agent user
+# agent user (* password = unlocked account, impossible hash — pubkey-only)
 RUN useradd -m -s /bin/bash agent \
+    && usermod -p '*' agent \
     && mkdir -p /home/agent/.ssh \
     && chmod 700 /home/agent/.ssh \
     && chown -R agent:agent /home/agent
