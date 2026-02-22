@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { getProject, stopProject, deleteProject, type ProjectDetail } from '../api/client'
+import { getAccessToken } from '../api/auth'
 import Terminal from '../components/Terminal'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -145,7 +146,7 @@ export default function ProjectDetailPage() {
       {project.status === 'running' && project.terminal_url && (
         <div>
           <h3>Terminal</h3>
-          <Terminal wsUrl={project.terminal_url} />
+          <Terminal wsUrl={`${project.terminal_url}?token=${getAccessToken()}`} />
         </div>
       )}
     </div>
