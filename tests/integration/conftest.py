@@ -1,6 +1,7 @@
 """
-M2 Integration Test Fixtures
-GCS storage, Docker container, and cleanup helpers.
+Integration Test Fixtures
+M2: GCS storage, Docker container, and cleanup helpers.
+M3: GCP IAM service account lifecycle testing.
 """
 
 import json
@@ -9,9 +10,13 @@ import subprocess
 import time
 import uuid
 
-import docker
 import pytest
 from google.cloud import storage
+
+try:
+    import docker
+except ImportError:
+    docker = None  # M3 tests don't need Docker
 
 # ---------------------------------------------------------------------------
 # Configuration — override via env vars or use defaults for pomodex project
@@ -191,3 +196,69 @@ def _wait_container_ready(container, timeout=30):
                 pass
         time.sleep(1)
     raise TimeoutError(f"Container {container.name} not ready after {timeout}s")
+
+
+# ---------------------------------------------------------------------------
+# M3: IAM fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def gcp_project():
+    return GCP_PROJECT
+
+
+@pytest.fixture(scope="session")
+def gcs_bucket_name():
+    return GCS_BUCKET
+
+
+@pytest.fixture(scope="session")
+def sa_key_path():
+    return GCS_KEY_PATH
+
+
+@pytest.fixture(scope="session")
+def test_project_id():
+    """Unique project ID for this M3 test session."""
+    return f"test-{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture(scope="session")
+def iam_client():
+    """IAM admin client authenticated with the Project Service SA."""
+    from google.cloud import iam_admin_v1
+    from google.oauth2 import service_account
+
+    credentials = service_account.Credentials.from_service_account_file(GCS_KEY_PATH)
+    return iam_admin_v1.IAMClient(credentials=credentials)
+
+
+# ---------------------------------------------------------------------------
+# M3: SA cleanup tracker
+# ---------------------------------------------------------------------------
+
+_created_sa_emails = []
+
+
+@pytest.fixture(scope="session")
+def created_sa_tracker():
+    """Track created SA emails for cleanup."""
+    return _created_sa_emails
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_created_sas(gcp_project):
+    """Delete all SAs created during the test session, including IAM bindings."""
+    yield
+    from backend.project_service.services.gcp_iam import delete_service_account
+
+    for email in _created_sa_emails:
+        try:
+            delete_service_account(
+                email, gcp_project,
+                credentials_path=GCS_KEY_PATH,
+                bucket=GCS_BUCKET,
+            )
+        except Exception:
+            pass  # Best-effort cleanup
