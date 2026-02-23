@@ -23,7 +23,7 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: "/secrets/project-service-sa.json"
       SANDBOX_IMAGE: "${SANDBOX_IMAGE:-agent-sandbox:latest}"
       HOST_IP: "${HOST_IP:-localhost}"
-      TERMINAL_PROXY_PORT: "9000"
+      PROJECT_SERVICE_PORT: "8000"
       CORS_ORIGINS: "${CORS_ORIGINS:-*}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -57,8 +57,9 @@ services:
   terminal-proxy:
     build: ./backend/terminal_proxy
     container_name: terminal-proxy
-    ports:
-      - "9000:9000"
+    # No host port mapping — accessed via project-service WebSocket proxy
+    # on platform-net. Direct port mapping breaks on Docker Desktop when
+    # the container joins sandbox networks (docker network connect issue).
     environment:
       PROJECT_SERVICE_URL: "http://project-service:8000"
       PROXY_PORT: "9000"

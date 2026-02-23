@@ -21,11 +21,11 @@ from backend.project_service.services import project_service as svc
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 HOST_IP = os.environ.get("HOST_IP", "0.0.0.0")
-TERMINAL_PROXY_PORT = os.environ.get("TERMINAL_PROXY_PORT", "9000")
+PROJECT_SERVICE_PORT = os.environ.get("PROJECT_SERVICE_PORT", "8000")
 
 
 def _terminal_url(project_id: uuid.UUID) -> str:
-    return f"ws://{HOST_IP}:{TERMINAL_PROXY_PORT}/terminal/{project_id}"
+    return f"ws://{HOST_IP}:{PROJECT_SERVICE_PORT}/ws/terminal/{project_id}"
 
 
 def _project_detail(p: Project) -> dict:

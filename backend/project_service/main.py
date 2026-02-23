@@ -11,6 +11,7 @@ from backend.project_service.middleware.internal_middleware import InternalOnlyM
 from backend.project_service.routes.auth import router as auth_router
 from backend.project_service.routes.internal import router as internal_router
 from backend.project_service.routes.projects import router as projects_router
+from backend.project_service.routes.terminal import router as terminal_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(internal_router)
 app.include_router(projects_router)
+app.include_router(terminal_router)
 
 
 @app.get("/health")
@@ -41,6 +43,11 @@ async def health():
 async def startup():
     from backend.project_service.models.database import create_tables, async_session
     await create_tables()
+
+    # Recover projects stuck in transitional states from a previous crash
+    from backend.project_service.tasks.inactivity_checker import recover_stuck_projects
+    async with async_session() as db:
+        await recover_stuck_projects(db)
 
     from backend.project_service.tasks.inactivity_checker import run_inactivity_checker_loop
     asyncio.create_task(run_inactivity_checker_loop(async_session))

@@ -207,7 +207,7 @@ async def start_project(
     instead of the latest snapshot.
     """
     project = await _get_owned_project(project_id, user_id, db)
-    if project.status != "stopped":
+    if project.status not in ("stopped", "error"):
         raise ValueError(f"Project is not stopped (status={project.status})")
 
     # Fetch user for GCP credentials
