@@ -1,7 +1,10 @@
 """Project CRUD routes."""
 
+import logging
 import os
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -176,7 +179,9 @@ async def list_snapshots(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
+        logger.exception("list_snapshots failed for project %s", project_id)
         raise HTTPException(status_code=500, detail=str(e))
+    logger.info("list_snapshots OK for project %s: %d snapshot(s)", project_id, len(snapshots))
     return snapshots
 
 

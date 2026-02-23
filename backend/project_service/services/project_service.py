@@ -267,8 +267,11 @@ async def start_project(
 
 async def list_snapshots(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> list[dict]:
     """List snapshot tags for a project. Returns sorted list of {tag, created_at}."""
+    logger.info("[%s] Listing snapshots (user=%s)", project_id, user_id)
     await _get_owned_project(project_id, user_id, db)
-    return await asyncio.to_thread(snapshot_mgr.list_snapshots, str(project_id))
+    result = await asyncio.to_thread(snapshot_mgr.list_snapshots, str(project_id))
+    logger.info("[%s] Found %d snapshot(s)", project_id, len(result))
+    return result
 
 
 async def snapshot_project(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Project:
