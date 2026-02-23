@@ -55,6 +55,15 @@ class BackupStatusResponse(BaseModel):
     snapshot_image: str | None = None
     last_snapshot_at: datetime | None = None
 
+# --- Snapshots ---
+
+class SnapshotItem(BaseModel):
+    tag: str
+    created_at: datetime
+
+class RestoreRequest(BaseModel):
+    snapshot_tag: str | None = None
+
 # --- Internal ---
 
 class InternalValidateRequest(BaseModel):

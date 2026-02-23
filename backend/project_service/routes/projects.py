@@ -11,7 +11,7 @@ from backend.project_service.middleware.auth_middleware import get_current_user_
 from backend.project_service.models.database import Project, get_db
 from backend.project_service.models.schemas import (
     CreateProjectRequest, ProjectResponse, ProjectDetailResponse,
-    ProjectCreateResponse, BackupStatusResponse,
+    ProjectCreateResponse, BackupStatusResponse, SnapshotItem, RestoreRequest,
 )
 from backend.project_service.services import project_service as svc
 
@@ -106,11 +106,13 @@ async def stop_project(
 @router.post("/{project_id}/start", response_model=ProjectDetailResponse)
 async def start_project(
     project_id: uuid.UUID,
+    body: RestoreRequest | None = None,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        project = await svc.start_project(project_id, uuid.UUID(user_id), db)
+        snapshot_tag = body.snapshot_tag if body else None
+        project = await svc.start_project(project_id, uuid.UUID(user_id), db, snapshot_tag=snapshot_tag)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -161,6 +163,21 @@ async def restore_project(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return _project_detail(project)
+
+
+@router.get("/{project_id}/snapshots", response_model=list[SnapshotItem])
+async def list_snapshots(
+    project_id: uuid.UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        snapshots = await svc.list_snapshots(project_id, uuid.UUID(user_id), db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return snapshots
 
 
 @router.get("/{project_id}/backup-status", response_model=BackupStatusResponse)

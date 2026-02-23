@@ -83,6 +83,57 @@ class TestCreateProject:
             mock_iam.grant_bucket_iam.assert_not_called()
 
 
+class TestListSnapshots:
+
+    async def test_list_snapshots_returns_sorted(self, db):
+        """list_snapshots returns tags sorted newest first."""
+        from backend.project_service.services.project_service import list_snapshots
+
+        user_id = await _create_user(db, with_gcp=True)
+        project = Project(
+            user_id=user_id, name="Snap List", status="stopped",
+            ssh_public_key="pub", ssh_private_key="priv",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
+        )
+        db.add(project)
+        await db.commit()
+        await db.refresh(project)
+
+        from datetime import datetime, timezone
+        mock_snapshots = [
+            {"tag": "20260223-100000", "created_at": datetime(2026, 2, 23, 10, 0, 0, tzinfo=timezone.utc)},
+            {"tag": "20260223-143015", "created_at": datetime(2026, 2, 23, 14, 30, 15, tzinfo=timezone.utc)},
+            {"tag": "20260222-090000", "created_at": datetime(2026, 2, 22, 9, 0, 0, tzinfo=timezone.utc)},
+        ]
+
+        with patch("backend.project_service.services.project_service.snapshot_mgr") as mock_snap:
+            mock_snap.list_snapshots.return_value = mock_snapshots
+
+            result = await list_snapshots(project.id, user_id, db)
+
+        assert len(result) == 3
+        assert result[0]["tag"] == "20260223-100000"
+        mock_snap.list_snapshots.assert_called_once_with(str(project.id))
+
+    async def test_list_snapshots_wrong_owner_raises(self, db):
+        """list_snapshots raises ValueError if user doesn't own project."""
+        from backend.project_service.services.project_service import list_snapshots
+
+        user_id = await _create_user(db, with_gcp=True)
+        other_user_id = await _create_user(db)
+        project = Project(
+            user_id=user_id, name="Not Yours", status="stopped",
+            ssh_public_key="pub", ssh_private_key="priv",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
+        )
+        db.add(project)
+        await db.commit()
+        await db.refresh(project)
+
+        with pytest.raises(ValueError, match="Project not found"):
+            await list_snapshots(project.id, other_user_id, db)
+
+
 class TestDeleteProject:
 
     async def test_delete_project_cleans_prefix_not_sa(self, db):

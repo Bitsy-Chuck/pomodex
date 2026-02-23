@@ -185,6 +185,110 @@ class TestStartProject:
         assert data["status"] == "running"
 
 
+class TestListSnapshots:
+
+    async def test_list_snapshots(self, client, db):
+        """GET /snapshots returns snapshot list for owned project."""
+        headers, user_id = await _register_and_login(client, "snaplist@example.com")
+
+        project = Project(
+            user_id=uuid.UUID(user_id), name="Snap List", status="stopped",
+            ssh_public_key="pub", ssh_private_key="priv",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
+        )
+        db.add(project)
+        await db.commit()
+        await db.refresh(project)
+
+        mock_data = [
+            {"tag": "20260223-143015", "created_at": datetime(2026, 2, 23, 14, 30, 15, tzinfo=timezone.utc)},
+            {"tag": "20260223-100000", "created_at": datetime(2026, 2, 23, 10, 0, 0, tzinfo=timezone.utc)},
+        ]
+        with patch("backend.project_service.services.project_service.snapshot_mgr") as mock_snap:
+            mock_snap.list_snapshots.return_value = mock_data
+            resp = await client.get(f"/projects/{project.id}/snapshots", headers=headers)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        assert data[0]["tag"] == "20260223-143015"
+        assert "created_at" in data[0]
+
+    async def test_list_snapshots_wrong_user(self, client, db):
+        """GET /snapshots for non-owned project returns 404."""
+        headers_a, user_a_id = await _register_and_login(client, "snapowner@example.com")
+        headers_b, _ = await _register_and_login(client, "snapintruder@example.com")
+
+        project = Project(
+            user_id=uuid.UUID(user_a_id), name="Owner Snaps", status="stopped",
+            ssh_public_key="pub", ssh_private_key="priv",
+            gcs_prefix=f"{uuid.uuid4()}/workspace",
+        )
+        db.add(project)
+        await db.commit()
+        await db.refresh(project)
+
+        resp = await client.get(f"/projects/{project.id}/snapshots", headers=headers_b)
+        assert resp.status_code == 404
+
+
+class TestStartWithSnapshotTag:
+
+    async def test_start_with_snapshot_tag(self, client, db):
+        """POST /start with snapshot_tag restores from specific tag."""
+        headers, user_id = await _register_and_login(client, "tagrestore@example.com")
+        await _set_user_gcp(db, user_id)
+
+        project = Project(
+            user_id=uuid.UUID(user_id), name="Tag Restore", status="stopped",
+            ssh_public_key="pub", ssh_private_key="priv",
+            gcs_prefix=f"{uuid.uuid4()}/workspace", snapshot_image="registry/img:latest",
+        )
+        db.add(project)
+        await db.commit()
+        await db.refresh(project)
+
+        with patch("backend.project_service.services.project_service.snapshot_mgr") as mock_snap, \
+             patch("backend.project_service.services.project_service.docker_mgr"):
+            mock_snap.restore_from_snapshot.return_value = "new-cid-789"
+            mock_snap.AR_REGISTRY = "europe-west1-docker.pkg.dev/pomodex-fd2bcd/sandboxes"
+            resp = await client.post(
+                f"/projects/{project.id}/start",
+                json={"snapshot_tag": "20260223-143015"},
+                headers=headers,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "running"
+        # Verify it used the specific tag image
+        call_args = mock_snap.restore_from_snapshot.call_args
+        assert "20260223-143015" in call_args[0][1]
+
+    async def test_start_without_body_still_works(self, client, db):
+        """POST /start with no body works as before (backward compatible)."""
+        headers, user_id = await _register_and_login(client, "notagstart@example.com")
+        await _set_user_gcp(db, user_id)
+
+        project = Project(
+            user_id=uuid.UUID(user_id), name="No Tag", status="stopped",
+            ssh_public_key="pub", ssh_private_key="priv",
+            gcs_prefix=f"{uuid.uuid4()}/workspace", snapshot_image="registry/img:latest",
+        )
+        db.add(project)
+        await db.commit()
+        await db.refresh(project)
+
+        with patch("backend.project_service.services.project_service.snapshot_mgr") as mock_snap, \
+             patch("backend.project_service.services.project_service.docker_mgr"):
+            mock_snap.restore_image_for_project.return_value = "registry/img:latest"
+            mock_snap.restore_from_snapshot.return_value = "new-cid-000"
+            resp = await client.post(f"/projects/{project.id}/start", headers=headers)
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "running"
+
+
 class TestDeleteProject:
 
     async def test_delete_full_teardown(self, client, db):

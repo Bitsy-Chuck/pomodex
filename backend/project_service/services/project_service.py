@@ -197,8 +197,15 @@ async def stop_project(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSessi
     return project
 
 
-async def start_project(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Project:
-    """Start a stopped project: restore from snapshot or base image."""
+async def start_project(
+    project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession,
+    snapshot_tag: str | None = None,
+) -> Project:
+    """Start a stopped project: restore from snapshot or base image.
+
+    If snapshot_tag is provided, restores from that specific snapshot tag
+    instead of the latest snapshot.
+    """
     project = await _get_owned_project(project_id, user_id, db)
     if project.status != "stopped":
         raise ValueError(f"Project is not stopped (status={project.status})")
@@ -218,18 +225,27 @@ async def start_project(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSess
             "ssh_public_key": project.ssh_public_key,
         }
 
-        image = snapshot_mgr.restore_image_for_project(project.snapshot_image, SANDBOX_IMAGE)
-        logger.info("[%s] Restoring from image: %s", project_id, image)
-
-        if project.snapshot_image:
+        if snapshot_tag:
+            # Restore from a specific snapshot tag
+            image = f"{snapshot_mgr.AR_REGISTRY}/{project_id}:{snapshot_tag}"
+            logger.info("[%s] Restoring from specific snapshot: %s", project_id, image)
             container_id = await asyncio.to_thread(
                 snapshot_mgr.restore_from_snapshot,
                 str(project_id), image, config, CREDENTIALS_PATH,
             )
         else:
-            container_id = await asyncio.to_thread(
-                snapshot_mgr.restore_from_gcs, str(project_id), image, config,
-            )
+            image = snapshot_mgr.restore_image_for_project(project.snapshot_image, SANDBOX_IMAGE)
+            logger.info("[%s] Restoring from image: %s", project_id, image)
+
+            if project.snapshot_image:
+                container_id = await asyncio.to_thread(
+                    snapshot_mgr.restore_from_snapshot,
+                    str(project_id), image, config, CREDENTIALS_PATH,
+                )
+            else:
+                container_id = await asyncio.to_thread(
+                    snapshot_mgr.restore_from_gcs, str(project_id), image, config,
+                )
 
         project.container_id = container_id
         project.status = "running"
@@ -247,6 +263,12 @@ async def start_project(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSess
         await db.refresh(project)
 
     return project
+
+
+async def list_snapshots(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> list[dict]:
+    """List snapshot tags for a project. Returns sorted list of {tag, created_at}."""
+    await _get_owned_project(project_id, user_id, db)
+    return await asyncio.to_thread(snapshot_mgr.list_snapshots, str(project_id))
 
 
 async def snapshot_project(project_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Project:

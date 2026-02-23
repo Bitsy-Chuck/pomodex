@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { getProject, stopProject, deleteProject, type ProjectDetail } from '../api/client'
+import {
+  getProject, stopProject, startProject, deleteProject, listSnapshots,
+  type ProjectDetail, type SnapshotItem,
+} from '../api/client'
 import { getAccessToken } from '../api/auth'
 import Terminal from '../components/Terminal'
 
@@ -9,6 +12,7 @@ const STATUS_COLORS: Record<string, string> = {
   stopped: '#a0aec0',
   error: '#e53e3e',
   snapshotting: '#d69e2e',
+  restoring: '#3182ce',
 }
 
 export default function ProjectDetailPage() {
@@ -19,6 +23,9 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showKey, setShowKey] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState('')
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [snapshots, setSnapshots] = useState<SnapshotItem[]>([])
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false)
 
   // Show SSH key from create flow (show-once UX)
   const sshKeyFromCreate = (location.state as { sshKey?: string } | null)?.sshKey
@@ -29,25 +36,62 @@ export default function ProjectDetailPage() {
       .then(setProject)
       .catch(() => {})
       .finally(() => setLoading(false))
+    fetchSnapshots()
   }, [id])
 
-  async function handleStop() {
+  function fetchSnapshots() {
     if (!id) return
-    const updated = await stopProject(id)
-    setProject(updated)
+    setSnapshotsLoading(true)
+    listSnapshots(id)
+      .then(setSnapshots)
+      .catch(() => setSnapshots([]))
+      .finally(() => setSnapshotsLoading(false))
+  }
+
+  async function handlePause() {
+    if (!id) return
+    setActionLoading('pause')
+    try {
+      const updated = await stopProject(id)
+      setProject(updated)
+      fetchSnapshots()
+    } catch {
+      // error handled by UI state
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handleStart(snapshotTag?: string) {
+    if (!id) return
+    setActionLoading(snapshotTag ? `restore-${snapshotTag}` : 'start')
+    try {
+      const updated = await startProject(id, snapshotTag)
+      setProject(updated)
+    } catch {
+      // error handled by UI state
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   async function handleDelete() {
     if (!id || !project) return
     if (confirmDelete !== project.name) return
-    await deleteProject(id)
-    navigate('/projects')
+    setActionLoading('delete')
+    try {
+      await deleteProject(id)
+      navigate('/projects')
+    } catch {
+      setActionLoading(null)
+    }
   }
 
   if (loading) return <p>Loading...</p>
   if (!project) return <p>Project not found.</p>
 
   const color = STATUS_COLORS[project.status] || '#a0aec0'
+  const isTransitioning = ['snapshotting', 'restoring', 'creating'].includes(project.status)
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -103,19 +147,39 @@ export default function ProjectDetailPage() {
 
       <div style={{ marginBottom: 24, display: 'flex', gap: 8 }}>
         {project.status === 'running' && (
-          <button onClick={handleStop} style={{
-            background: '#e53e3e', color: '#fff', border: 'none',
-            borderRadius: 6, padding: '8px 16px', cursor: 'pointer',
-          }}>
-            Stop
+          <button
+            onClick={handlePause}
+            disabled={actionLoading !== null}
+            style={{
+              background: '#d69e2e', color: '#fff', border: 'none',
+              borderRadius: 6, padding: '8px 16px', cursor: actionLoading ? 'not-allowed' : 'pointer',
+              opacity: actionLoading ? 0.6 : 1,
+            }}
+          >
+            {actionLoading === 'pause' ? 'Pausing...' : 'Pause'}
           </button>
         )}
-        <button onClick={() => setConfirmDelete(prev => prev === '' ? ' ' : '')} style={{
-          background: '#718096', color: '#fff', border: 'none',
-          borderRadius: 6, padding: '8px 16px', cursor: 'pointer',
-        }}>
-          Delete
-        </button>
+        {project.status === 'stopped' && (
+          <button
+            onClick={() => handleStart()}
+            disabled={actionLoading !== null}
+            style={{
+              background: '#38a169', color: '#fff', border: 'none',
+              borderRadius: 6, padding: '8px 16px', cursor: actionLoading ? 'not-allowed' : 'pointer',
+              opacity: actionLoading ? 0.6 : 1,
+            }}
+          >
+            {actionLoading === 'start' ? 'Starting...' : 'Start'}
+          </button>
+        )}
+        {!isTransitioning && (
+          <button onClick={() => setConfirmDelete(prev => prev === '' ? ' ' : '')} style={{
+            background: '#718096', color: '#fff', border: 'none',
+            borderRadius: 6, padding: '8px 16px', cursor: 'pointer',
+          }}>
+            Delete
+          </button>
+        )}
       </div>
 
       {confirmDelete !== '' && (
@@ -131,17 +195,59 @@ export default function ProjectDetailPage() {
           />
           <button
             onClick={handleDelete}
-            disabled={confirmDelete !== project.name}
+            disabled={confirmDelete !== project.name || actionLoading === 'delete'}
             style={{
               background: confirmDelete === project.name ? '#e53e3e' : '#cbd5e0',
               color: '#fff', border: 'none', borderRadius: 6,
               padding: '8px 16px', cursor: 'pointer',
             }}
           >
-            Confirm Delete
+            {actionLoading === 'delete' ? 'Deleting...' : 'Confirm Delete'}
           </button>
         </div>
       )}
+
+      {/* Snapshots table */}
+      <div style={{ marginBottom: 24 }}>
+        <h3>Snapshots</h3>
+        {snapshotsLoading ? (
+          <p style={{ color: '#718096' }}>Loading snapshots...</p>
+        ) : snapshots.length === 0 ? (
+          <p style={{ color: '#718096' }}>No snapshots yet. Pause the project to create one.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                <th style={{ padding: '8px 12px' }}>Tag</th>
+                <th style={{ padding: '8px 12px' }}>Created</th>
+                <th style={{ padding: '8px 12px' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshots.map((snap) => (
+                <tr key={snap.tag} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 13 }}>{snap.tag}</td>
+                  <td style={{ padding: '8px 12px' }}>{new Date(snap.created_at).toLocaleString()}</td>
+                  <td style={{ padding: '8px 12px' }}>
+                    <button
+                      onClick={() => handleStart(snap.tag)}
+                      disabled={project.status !== 'stopped' || actionLoading !== null}
+                      style={{
+                        background: project.status === 'stopped' && !actionLoading ? '#3182ce' : '#cbd5e0',
+                        color: '#fff', border: 'none', borderRadius: 4,
+                        padding: '4px 12px', cursor: project.status === 'stopped' && !actionLoading ? 'pointer' : 'not-allowed',
+                        fontSize: 13,
+                      }}
+                    >
+                      {actionLoading === `restore-${snap.tag}` ? 'Restoring...' : 'Restore'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {project.status === 'running' && project.terminal_url && (() => {
         const token = getAccessToken()

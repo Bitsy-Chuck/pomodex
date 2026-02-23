@@ -25,6 +25,11 @@ export interface ProjectDetail extends ProjectSummary {
   last_snapshot_at: string | null
 }
 
+export interface SnapshotItem {
+  tag: string
+  created_at: string
+}
+
 export interface BackupStatus {
   last_backup_at: string | null
   snapshot_image: string | null
@@ -145,8 +150,11 @@ export async function stopProject(id: string): Promise<ProjectDetail> {
   return request(`/projects/${id}/stop`, { method: 'POST' })
 }
 
-export async function startProject(id: string): Promise<ProjectDetail> {
-  return request(`/projects/${id}/start`, { method: 'POST' })
+export async function startProject(id: string, snapshotTag?: string): Promise<ProjectDetail> {
+  return request(`/projects/${id}/start`, {
+    method: 'POST',
+    body: snapshotTag ? JSON.stringify({ snapshot_tag: snapshotTag }) : undefined,
+  })
 }
 
 export async function deleteProject(id: string): Promise<void> {
@@ -159,6 +167,10 @@ export async function snapshotProject(id: string): Promise<ProjectDetail> {
 
 export async function restoreProject(id: string): Promise<ProjectDetail> {
   return request(`/projects/${id}/restore`, { method: 'POST' })
+}
+
+export async function listSnapshots(id: string): Promise<SnapshotItem[]> {
+  return request(`/projects/${id}/snapshots`)
 }
 
 export async function getBackupStatus(id: string): Promise<BackupStatus> {

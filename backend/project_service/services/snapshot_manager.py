@@ -25,23 +25,34 @@ def _get_client() -> docker.DockerClient:
     return docker.from_env()
 
 
-def _ar_login(sa_key_path: str) -> None:
-    """Authenticate Docker daemon to Artifact Registry using SA key JSON.
+def _push_image(client: docker.DockerClient, image: str, tag: str, auth_config: dict) -> None:
+    """Push an image to AR and raise on failure."""
+    logger.info("Pushing %s:%s to AR", image, tag)
+    output = client.images.push(image, tag=tag, auth_config=auth_config)
 
-    Uses `docker login` with _json_key as username and the key file content
-    as password. This is the programmatic equivalent of
-    `gcloud auth configure-docker`.
+    # Docker SDK returns newline-delimited JSON; last line has the result
+    for line in output.strip().splitlines():
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if "error" in msg:
+            raise RuntimeError(f"Push failed for {image}:{tag}: {msg['error']}")
+
+    logger.info("Pushed %s:%s to AR", image, tag)
+
+
+def _ar_auth_config(sa_key_path: str) -> dict:
+    """Build auth_config dict for Artifact Registry using SA key JSON.
+
+    Returns a dict that can be passed directly to Docker SDK pull()/push()
+    as the auth_config parameter. This avoids relying on daemon-level
+    credential persistence across client instances.
     """
     with open(sa_key_path) as f:
         key_json = f.read()
 
-    client = _get_client()
-    registry = "europe-west1-docker.pkg.dev"
-    client.login(
-        username="_json_key",
-        password=key_json,
-        registry=f"https://{registry}",
-    )
+    return {"username": "_json_key", "password": key_json}
 
 
 def restore_image_for_project(snapshot_image: str | None, base_image: str) -> str:
@@ -100,12 +111,9 @@ def snapshot_project(project_id: str, sa_key_path: str = GCS_KEY_PATH_DEFAULT) -
     committed.tag(ar_image, tag="latest")
 
     # 3. Authenticate and push to AR
-    _ar_login(sa_key_path)
-
-    logger.info("Pushing %s:%s to AR", ar_image, timestamp)
-    client.images.push(ar_image, tag=timestamp)
-    logger.info("Pushing %s:latest to AR", ar_image)
-    client.images.push(ar_image, tag="latest")
+    auth_config = _ar_auth_config(sa_key_path)
+    _push_image(client, ar_image, timestamp, auth_config)
+    _push_image(client, ar_image, "latest", auth_config)
 
     # 4. Stop and remove container (keep volume)
     logger.info("Stopping and removing container %s", container_name)
@@ -141,10 +149,15 @@ def restore_from_snapshot(
     """
     client = _get_client()
 
-    # Authenticate and pull
-    _ar_login(sa_key_path)
-    logger.info("Pulling snapshot image %s", snapshot_image)
-    client.images.pull(snapshot_image)
+    # Use local image if available, otherwise pull from AR
+    try:
+        client.images.get(snapshot_image)
+        logger.info("Using local snapshot image %s", snapshot_image)
+    except docker.errors.ImageNotFound:
+        auth_config = _ar_auth_config(sa_key_path)
+        logger.info("Pulling snapshot image %s from AR", snapshot_image)
+        client.images.pull(snapshot_image, auth_config=auth_config)
+        logger.info("Pulled snapshot image %s", snapshot_image)
 
     # Create container from snapshot image with existing volume
     container = client.containers.run(
@@ -228,6 +241,53 @@ def restore_from_gcs(
         nano_cpus=1_000_000_000,
     )
     return container.id
+
+
+def list_snapshots(project_id: str) -> list[dict]:
+    """List all snapshot tags for a project from Artifact Registry.
+
+    Returns sorted list (newest first) of {tag, created_at} dicts.
+    Excludes the 'latest' tag.
+    """
+    ar_image = f"{AR_REGISTRY}/{project_id}"
+
+    try:
+        output = subprocess.check_output(
+            [
+                "gcloud", "artifacts", "docker", "images", "list",
+                ar_image,
+                "--project=pomodex-fd2bcd",
+                "--format=json",
+                "--include-tags",
+            ],
+            text=True,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError:
+        return []
+
+    images = json.loads(output) if output.strip() else []
+    if not images:
+        return []
+
+    snapshots = []
+    for img in images:
+        tags = img.get("tags", "")
+        # tags can be a comma-separated string
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()] if isinstance(tags, str) else tags
+        for tag in tag_list:
+            if tag == "latest":
+                continue
+            # Parse timestamp tag format: YYYYMMDD-HHMMSS
+            try:
+                created_at = datetime.strptime(tag, "%Y%m%d-%H%M%S").replace(tzinfo=timezone.utc)
+                snapshots.append({"tag": tag, "created_at": created_at})
+            except ValueError:
+                continue
+
+    # Sort newest first
+    snapshots.sort(key=lambda s: s["created_at"], reverse=True)
+    return snapshots
 
 
 def delete_snapshot_images(project_id: str) -> None:
