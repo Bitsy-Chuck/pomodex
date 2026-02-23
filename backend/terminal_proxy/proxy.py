@@ -42,55 +42,39 @@ def parse_ws_url(path: str) -> tuple[str | None, str | None]:
 
 async def handle_connection(websocket):
     """Handle a single WebSocket connection through the full lifecycle."""
-    logger.info("[WS] new connection from %s path=%s", websocket.remote_address, websocket.request.path)
-
-    # 1. Parse URL
     project_id, token = parse_ws_url(websocket.request.path)
 
     if project_id is None:
-        logger.info("[WS] rejected: invalid path")
         await websocket.close(4400, "Invalid path")
         return
 
-    # 2. Require token
     if token is None:
-        logger.info("[WS] rejected: no token for project=%s", project_id)
         await websocket.close(4400, "Token required")
         return
 
-    logger.info("[WS] project=%s token_len=%d token_prefix=%s", project_id, len(token), token[:20])
-
-    # 3. Validate token via Project Service
     user_id = await validate_token(token, project_id)
     if user_id is None:
-        logger.info("[WS] rejected: validate_token returned None for project=%s", project_id)
         await websocket.close(4401, "Unauthorized")
         return
 
-    logger.info("[WS] authenticated user=%s project=%s", user_id, project_id)
+    logger.info("Authenticated user=%s project=%s", user_id, project_id)
 
-    # 4. Look up container bridge IP
     try:
         container_ip = container_lookup.get_container_ip(project_id)
     except container_lookup.ContainerNotRunning as e:
-        logger.warning("[WS] container not running for %s: %s", project_id, e)
+        logger.warning("Container not running for %s: %s", project_id, e)
         await websocket.close(4503, "Container not running")
         return
 
-    # 5. Connect to ttyd and start proxying
     ttyd_url = f"ws://{container_ip}:{TTYD_PORT}/ws"
-    logger.info("[WS] connecting to ttyd at %s", ttyd_url)
     try:
         async with websockets.connect(ttyd_url, subprotocols=["tty"]) as ttyd_ws:
-            logger.info("[WS] ttyd connected, proxying for user=%s project=%s", user_id, project_id)
-            logger.info("[PROXY] starting bidirectional relay")
             audit = AuditLogger(project_id, user_id)
             await _proxy(websocket, ttyd_ws, audit)
-            logger.info("[PROXY] relay ended")
     except websockets.ConnectionClosed:
-        logger.info("[WS] connection closed for project=%s", project_id)
+        pass
     except Exception as e:
-        logger.error("[WS] ttyd connection failed for %s: %s", project_id, e)
+        logger.error("ttyd connection failed for %s: %s", project_id, e)
         try:
             await websocket.close(4502, "Backend connection failed")
         except Exception:
@@ -103,7 +87,6 @@ async def _proxy(client_ws, ttyd_ws, audit: AuditLogger):
     async def client_to_ttyd():
         try:
             async for message in client_ws:
-                logger.info("[PROXY] client→ttyd type=%s len=%d", type(message).__name__, len(message))
                 audit.log_input(message)
                 await ttyd_ws.send(message)
         except websockets.ConnectionClosed:
@@ -112,9 +95,6 @@ async def _proxy(client_ws, ttyd_ws, audit: AuditLogger):
     async def ttyd_to_client():
         try:
             async for message in ttyd_ws:
-                logger.info("[PROXY] ttyd→client type=%s len=%d preview=%s",
-                            type(message).__name__, len(message),
-                            repr(message[:80]) if len(message) <= 200 else repr(message[:80]) + "...")
                 await client_ws.send(message)
         except websockets.ConnectionClosed:
             pass

@@ -146,9 +146,6 @@ export default function ProjectDetailPage() {
       {project.status === 'running' && project.terminal_url && (() => {
         const token = getAccessToken()
         const fullUrl = `${project.terminal_url}?token=${token}`
-        console.log('[TERMINAL] terminal_url from API:', project.terminal_url)
-        console.log('[TERMINAL] token from localStorage:', token ? `${token.substring(0, 20)}... (len=${token.length})` : 'NULL')
-        console.log('[TERMINAL] full wsUrl:', fullUrl)
         return (
           <div>
             <h3>Terminal</h3>

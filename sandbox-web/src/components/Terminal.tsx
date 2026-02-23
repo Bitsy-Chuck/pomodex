@@ -46,7 +46,6 @@ export default function Terminal({ wsUrl, onDisconnect }: TerminalProps) {
     termRef.current = term
     fitRef.current = fit
 
-    console.log('[WS] creating WebSocket with url:', wsUrl)
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
@@ -54,49 +53,33 @@ export default function Terminal({ wsUrl, onDisconnect }: TerminalProps) {
 
     ws.onopen = () => {
       if (cancelled) { ws.close(); return }
-      console.log('[WS] connected, sending auth+resize:', term.cols, 'x', term.rows)
       // ttyd 1.7+ expects the first message to be a JSON auth+resize payload (no type prefix)
       const encoder = new TextEncoder()
       ws.send(encoder.encode(JSON.stringify({ AuthToken: '', columns: term.cols, rows: term.rows })))
     }
 
     ws.onmessage = (event) => {
-      console.log('[WS] onmessage type:', typeof event.data,
-        event.data instanceof ArrayBuffer ? `ArrayBuffer(${event.data.byteLength})` : `string(${event.data.length})`,
-        typeof event.data === 'string' ? event.data.substring(0, 100) : '')
-      if (typeof event.data === 'string') {
-        console.log('[WS] received text frame (unexpected), ignoring:', event.data.substring(0, 200))
-        return
-      }
-      const rawData = event.data as ArrayBuffer
-      const view = new Uint8Array(rawData)
+      if (typeof event.data === 'string') return
+      const view = new Uint8Array(event.data as ArrayBuffer)
       if (view.length === 0) return
 
       const msgType = view[0]
       const payload = view.slice(1)
-      console.log('[WS] binary msg type:', msgType, 'payload_len:', payload.length)
 
       if (msgType === TTYD_OUTPUT) {
         term.write(payload)
-      } else if (msgType === TTYD_SET_WINDOW_TITLE) {
-        console.log('[WS] set_window_title')
-      } else if (msgType === TTYD_SET_PREFERENCES) {
-        console.log('[WS] set_preferences')
-      } else {
-        console.log('[WS] unknown ttyd msg type:', msgType)
       }
+      // TTYD_SET_WINDOW_TITLE and TTYD_SET_PREFERENCES are silently ignored
     }
 
-    ws.onclose = (e) => {
+    ws.onclose = () => {
       if (cancelled) return
-      console.log('[WS] closed, code:', e.code, 'reason:', e.reason)
       term.write('\r\n\x1b[31m[Disconnected]\x1b[0m\r\n')
       onDisconnect?.()
     }
 
-    ws.onerror = (e) => {
+    ws.onerror = () => {
       if (cancelled) return
-      console.error('[WS] error', e)
       term.write('\r\n\x1b[31m[Connection error]\x1b[0m\r\n')
     }
 
