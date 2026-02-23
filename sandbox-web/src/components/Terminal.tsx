@@ -12,6 +12,8 @@ const TTYD_SET_PREFERENCES = '2'.charCodeAt(0)  // 50
 const TTYD_INPUT = '0'.charCodeAt(0)            // 48 (client → server)
 const TTYD_RESIZE = '1'.charCodeAt(0)           // 49
 
+let _wsSeq = 0
+
 interface TerminalProps {
   wsUrl: string
   onDisconnect?: () => void
@@ -34,6 +36,12 @@ export default function Terminal({ wsUrl, onDisconnect }: TerminalProps) {
 
   useEffect(() => {
     if (!containerRef.current) return
+
+    const id = ++_wsSeq
+    const log = (msg: string, ...args: unknown[]) =>
+      console.log(`[Terminal ws:${id}] ${msg}`, ...args)
+
+    log('effect MOUNT wsUrl=%s', wsUrl)
     let cancelled = false
 
     const term = new XTerm({ cursorBlink: true, fontSize: 14 })
@@ -46,25 +54,40 @@ export default function Terminal({ wsUrl, onDisconnect }: TerminalProps) {
     termRef.current = term
     fitRef.current = fit
 
+    log('creating WebSocket')
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.binaryType = 'arraybuffer'
 
+    log('readyState after new: %d (0=CONNECTING)', ws.readyState)
+
     ws.onopen = () => {
+      log('onopen (cancelled=%s, readyState=%d)', cancelled, ws.readyState)
       if (cancelled) { ws.close(); return }
       // ttyd 1.7+ expects the first message to be a JSON auth+resize payload (no type prefix)
       const encoder = new TextEncoder()
-      ws.send(encoder.encode(JSON.stringify({ AuthToken: '', columns: term.cols, rows: term.rows })))
+      const authPayload = JSON.stringify({ AuthToken: '', columns: term.cols, rows: term.rows })
+      log('sending auth: %s', authPayload)
+      ws.send(encoder.encode(authPayload))
     }
 
+    let msgCount = 0
     ws.onmessage = (event) => {
-      if (typeof event.data === 'string') return
+      if (typeof event.data === 'string') {
+        log('onmessage string (ignored): %s', event.data.slice(0, 100))
+        return
+      }
       const view = new Uint8Array(event.data as ArrayBuffer)
       if (view.length === 0) return
 
+      msgCount++
       const msgType = view[0]
       const payload = view.slice(1)
+
+      if (msgCount <= 5) {
+        log('onmessage #%d type=%d len=%d', msgCount, msgType, view.length)
+      }
 
       if (msgType === TTYD_OUTPUT) {
         term.write(payload)
@@ -72,13 +95,16 @@ export default function Terminal({ wsUrl, onDisconnect }: TerminalProps) {
       // TTYD_SET_WINDOW_TITLE and TTYD_SET_PREFERENCES are silently ignored
     }
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      log('onclose code=%d reason=%s wasClean=%s cancelled=%s (received %d msgs)',
+        event.code, JSON.stringify(event.reason), event.wasClean, cancelled, msgCount)
       if (cancelled) return
       term.write('\r\n\x1b[31m[Disconnected]\x1b[0m\r\n')
       onDisconnect?.()
     }
 
-    ws.onerror = () => {
+    ws.onerror = (event) => {
+      log('onerror readyState=%d cancelled=%s event=%o', ws.readyState, cancelled, event)
       if (cancelled) return
       term.write('\r\n\x1b[31m[Connection error]\x1b[0m\r\n')
     }
@@ -99,6 +125,8 @@ export default function Terminal({ wsUrl, onDisconnect }: TerminalProps) {
     ro.observe(containerRef.current)
 
     return () => {
+      log('effect CLEANUP (readyState=%d, cancelled_was=%s, received %d msgs)',
+        ws.readyState, cancelled, msgCount)
       cancelled = true
       ro.disconnect()
       ws.close()
