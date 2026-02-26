@@ -58,6 +58,17 @@ Internet
 - **Teaching/workshops** — provision environments for students with pre-installed tools
 - **CI-adjacent tasks** — run untrusted code in isolated containers with automatic cleanup
 
+## Roadmap
+
+Features under consideration (vote on the [landing page](https://pomodex.dev)):
+
+- **Browser Streaming (VNC)** — stream a full desktop via KasmVNC, run GUI apps and IDEs in the browser
+- **Custom Base Images** — start sandboxes from your own Docker images with pre-installed stacks
+- **Team Sharing** — share sandbox access with teammates, collaborative terminal sessions
+- **API & SDK** — Python and TypeScript SDKs for programmatic sandbox management
+- **GPU Instances** — attach GPUs for ML training, inference, and accelerated workloads
+- **Multi-Cloud Support** — deploy on AWS or Azure in addition to GCP
+
 ---
 
 ## Architecture

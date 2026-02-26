@@ -163,9 +163,9 @@ const revealObserver = new IntersectionObserver((entries) => {
   });
 }, observerOptions);
 
-// Observe feature cards, steps, use-case cards, pricing cards, and tech items
+// Observe feature cards, steps, use-case cards, roadmap cards, and tech items
 document.querySelectorAll(
-  '.feature-card, .step, .use-case-card, .pricing-card, .tech-item'
+  '.feature-card, .step, .use-case-card, .roadmap-card, .tech-item'
 ).forEach((el, i) => {
   el.style.opacity = '0';
   el.style.transform = 'translateY(20px)';
@@ -177,3 +177,77 @@ document.querySelectorAll(
 const style = document.createElement('style');
 style.textContent = `.revealed { opacity: 1 !important; transform: translateY(0) !important; }`;
 document.head.appendChild(style);
+
+// ===========================
+// Early Access & Vote
+// ===========================
+const CONTACT_EMAIL = atob('c2luZ2h0ZWphc3Y5QGdtYWlsLmNvbQ==');
+let currentVoteFeature = '';
+
+function submitEarlyAccess(e) {
+  e.preventDefault();
+  const email = document.getElementById('earlyAccessEmail').value.trim();
+  const feature = document.getElementById('earlyAccessFeature').value;
+  if (!email) return;
+
+  let subject = 'Pomodex Early Access Request';
+  let body = `New early access request from: ${email}`;
+  if (feature) {
+    subject = `Pomodex Early Access + Vote: ${feature}`;
+    body = `New early access request from: ${email}\n\nFeature vote: ${feature}`;
+  }
+
+  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  const status = document.getElementById('earlyAccessStatus');
+  status.textContent = 'Opening your email client...';
+  status.style.color = '#34d399';
+}
+
+function openVoteModal(featureName) {
+  currentVoteFeature = featureName;
+  document.getElementById('voteFeatureName').textContent = featureName;
+  document.getElementById('voteEmail').value = '';
+  document.getElementById('voteStatus').textContent = '';
+  document.getElementById('voteModal').style.display = 'flex';
+}
+
+function closeVoteModal() {
+  document.getElementById('voteModal').style.display = 'none';
+  currentVoteFeature = '';
+}
+
+function submitVote(e) {
+  e.preventDefault();
+  const email = document.getElementById('voteEmail').value.trim();
+  if (!email || !currentVoteFeature) return;
+
+  const subject = `Pomodex Feature Vote: ${currentVoteFeature}`;
+  const body = `Feature vote from: ${email}\n\nVoted for: ${currentVoteFeature}`;
+
+  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  // Mark as voted
+  const card = document.querySelector(`[data-feature="${currentVoteFeature.toLowerCase().replace(/[^a-z0-9]+/g, '-')}"]`);
+  if (card) {
+    const btn = card.querySelector('.roadmap-card__vote');
+    btn.classList.add('roadmap-card__vote--voted');
+    btn.querySelector('span').textContent = 'Voted';
+  }
+
+  const status = document.getElementById('voteStatus');
+  status.textContent = 'Opening your email client...';
+  status.style.color = '#34d399';
+
+  setTimeout(closeVoteModal, 2000);
+}
+
+// Close modal on overlay click
+document.getElementById('voteModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeVoteModal();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeVoteModal();
+});

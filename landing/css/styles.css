@@ -819,6 +819,202 @@ img {
 }
 
 /* ===========================
+   Architecture Diagram
+   =========================== */
+.architecture-diagram {
+  margin-bottom: 64px;
+  display: flex;
+  justify-content: center;
+}
+
+.arch-pre {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 32px 40px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* ===========================
+   Roadmap
+   =========================== */
+.roadmap {
+  padding: 120px 0;
+}
+
+.roadmap__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.roadmap-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s ease;
+}
+
+.roadmap-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-bg-card-hover);
+}
+
+.roadmap-card__content {
+  flex: 1;
+}
+
+.roadmap-card__content h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.roadmap-card__content p {
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.roadmap-card__vote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.roadmap-card__vote:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-glow);
+}
+
+.roadmap-card__vote--voted {
+  border-color: var(--color-green);
+  color: var(--color-green);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+/* ===========================
+   Early Access Form
+   =========================== */
+.early-access-form {
+  display: flex;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto 16px;
+}
+
+.early-access-form__input {
+  flex: 1;
+  padding: 14px 20px;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.early-access-form__input:focus {
+  border-color: var(--color-primary);
+}
+
+.early-access-form__input::placeholder {
+  color: var(--color-text-dim);
+}
+
+/* ===========================
+   Vote Modal
+   =========================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  max-width: 420px;
+  width: 100%;
+  position: relative;
+}
+
+.modal h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.modal p {
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.modal__close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--color-text-dim);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal__close:hover {
+  color: var(--color-text);
+}
+
+.modal__status {
+  font-size: 0.85rem;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.modal .early-access-form__input {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+/* ===========================
    CTA
    =========================== */
 .cta {
@@ -970,6 +1166,10 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .roadmap__grid {
+    grid-template-columns: 1fr;
+  }
+
   .social-proof__stats {
     gap: 32px;
   }
@@ -1033,8 +1233,12 @@ img {
   .how-it-works,
   .use-cases,
   .tech-section,
-  .pricing,
+  .roadmap,
   .cta {
     padding: 80px 0;
+  }
+
+  .early-access-form {
+    flex-direction: column;
   }
 }

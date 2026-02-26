@@ -21,12 +21,12 @@
       <div class="nav__links" id="navLinks">
         <a href="#features">Features</a>
         <a href="#how-it-works">How It Works</a>
+        <a href="#architecture">Architecture</a>
         <a href="#use-cases">Use Cases</a>
-        <a href="#pricing">Pricing</a>
       </div>
       <div class="nav__actions">
-        <a href="/login" class="btn btn--ghost">Log In</a>
-        <a href="/register" class="btn btn--primary">Get Started Free</a>
+        <a href="https://github.com/Bitsy-Chuck/pomodex" class="btn btn--ghost" target="_blank" rel="noopener">GitHub</a>
+        <a href="#early-access" class="btn btn--primary">Request Early Access</a>
       </div>
       <button class="nav__toggle" id="navToggle" aria-label="Toggle menu">
         <span></span><span></span><span></span>
@@ -38,19 +38,19 @@
   <section class="hero">
     <div class="container hero__inner">
       <div class="hero__content">
-        <div class="hero__badge">Now in Public Beta</div>
+        <div class="hero__badge">Open Source</div>
         <h1 class="hero__title">
           Your dev environment.<br>
           <span class="gradient-text">Anywhere. Instantly.</span>
         </h1>
         <p class="hero__subtitle">
-          Spin up isolated Linux sandboxes in seconds. Full terminal in your browser, SSH access, persistent snapshots, and automatic backups. No config, no hassle.
+          Self-hosted cloud sandbox platform. Spin up isolated Ubuntu containers on demand with browser terminal, SSH access, persistent snapshots, and automatic backups to GCS. Give AI agents or developers their own disposable dev environments.
         </p>
         <div class="hero__cta">
-          <a href="/register" class="btn btn--primary btn--lg">Start Building Free</a>
+          <a href="#early-access" class="btn btn--primary btn--lg">Request Early Access</a>
           <a href="#demo" class="btn btn--outline btn--lg">See It In Action</a>
         </div>
-        <p class="hero__note">No credit card required. Free tier included.</p>
+        <p class="hero__note">Open source. Self-hosted on your own GCP account.</p>
       </div>
       <div class="hero__visual" id="demo">
         <div class="terminal-window">
@@ -76,26 +76,26 @@
     <div class="hero__bg-gradient"></div>
   </section>
 
-  <!-- Logos / Social Proof -->
+  <!-- Key Stats -->
   <section class="social-proof">
     <div class="container">
-      <p class="social-proof__text">Trusted by developers building the future</p>
+      <p class="social-proof__text">Simple. Self-hosted. No vendor lock-in.</p>
       <div class="social-proof__stats">
         <div class="stat">
-          <span class="stat__number" data-count="2500">0</span>
-          <span class="stat__label">Sandboxes Created</span>
+          <span class="stat__number">1 VM</span>
+          <span class="stat__label">Runs Everything</span>
         </div>
         <div class="stat">
-          <span class="stat__number" data-count="800">0</span>
-          <span class="stat__label">Active Developers</span>
-        </div>
-        <div class="stat">
-          <span class="stat__number">99.9%</span>
-          <span class="stat__label">Uptime</span>
+          <span class="stat__number">~$25/mo</span>
+          <span class="stat__label">GCP Cost (e2-medium)</span>
         </div>
         <div class="stat">
           <span class="stat__number">&lt;3s</span>
-          <span class="stat__label">Avg. Spin-up Time</span>
+          <span class="stat__label">Sandbox Spin-up</span>
+        </div>
+        <div class="stat">
+          <span class="stat__number">1 Script</span>
+          <span class="stat__label">To Deploy</span>
         </div>
       </div>
     </div>
@@ -261,117 +261,157 @@
     </div>
   </section>
 
-  <!-- Tech Stack Highlights -->
-  <section class="tech-section">
+  <!-- Architecture -->
+  <section class="tech-section" id="architecture">
     <div class="container">
       <div class="section-header">
-        <span class="section-tag">Under the Hood</span>
-        <h2>Production-grade infrastructure.<br>Developer-friendly interface.</h2>
+        <span class="section-tag">Architecture</span>
+        <h2>Only port 80 is exposed.<br>Everything else stays internal.</h2>
+        <p>Double WebSocket proxy keeps sandbox ports off the public internet. Per-sandbox Docker networks provide full isolation.</p>
+      </div>
+      <div class="architecture-diagram">
+        <pre class="arch-pre">
+Internet
+   |
+   v port 80
++----------------------------------------------------------+
+|  nginx (sandbox-web)                                     |
+|    /auth, /projects  --> project-service:8000             |
+|    /ws/terminal/*    --> project-service:8000             |
+|                            |                             |
+|                            v  internal WebSocket proxy   |
+|                        terminal-proxy:9000               |
+|                            |                             |
+|                            v  per-sandbox Docker network  |
+|                        ttyd:7681 (inside sandbox)        |
+|                                                          |
+|  postgres:5432 (internal only)                           |
+|  sandbox SSH:22 --> dynamic host port (30000+)           |
++----------------------------------------------------------+</pre>
       </div>
       <div class="tech-grid">
         <div class="tech-item">
           <strong>Docker Isolation</strong>
-          <p>Every sandbox is a dedicated container with its own network. Full resource isolation at the kernel level.</p>
+          <p>Every sandbox gets its own container and bridge network. /24 subnets support up to 4,096 concurrent environments.</p>
         </div>
         <div class="tech-item">
           <strong>Google Cloud Storage</strong>
-          <p>Workspaces synced to GCS every 5 minutes. Snapshot images stored in Artifact Registry with versioned tags.</p>
+          <p>Workspaces synced to GCS every 5 minutes via rclone. Snapshot images stored in Artifact Registry with versioned tags.</p>
         </div>
         <div class="tech-item">
-          <strong>Zero-Trust Security</strong>
-          <p>Per-project GCP service accounts. JWT authentication. Ed25519 SSH keys. Audit logging on all terminal I/O.</p>
+          <strong>JWT + SSH Auth</strong>
+          <p>JWT tokens for API and terminal WebSocket auth. Auto-generated Ed25519 keypairs per sandbox. No shared credentials.</p>
         </div>
         <div class="tech-item">
           <strong>WebSocket Terminal</strong>
-          <p>Low-latency binary protocol over WebSocket. Full TTY support with dynamic resize. No plugins or extensions needed.</p>
+          <p>Low-latency binary ttyd protocol over WebSocket. Full TTY support with dynamic resize. No browser plugins needed.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Pricing -->
-  <section class="pricing" id="pricing">
+  <!-- Roadmap -->
+  <section class="roadmap" id="roadmap">
     <div class="container">
       <div class="section-header">
-        <span class="section-tag">Pricing</span>
-        <h2>Start free. Scale when ready.</h2>
-        <p>No hidden fees. No surprise charges. Just sandboxes.</p>
+        <span class="section-tag">Roadmap</span>
+        <h2>What's coming next.</h2>
+        <p>Vote for the features you want most. Your vote helps us prioritize.</p>
       </div>
-      <div class="pricing__grid">
-        <div class="pricing-card">
-          <div class="pricing-card__header">
-            <h3>Free</h3>
-            <div class="pricing-card__price">
-              <span class="pricing-card__amount">$0</span>
-              <span class="pricing-card__period">/month</span>
-            </div>
+      <div class="roadmap__grid">
+        <div class="roadmap-card" data-feature="browser-streaming">
+          <div class="roadmap-card__content">
+            <h3>Browser Streaming (VNC)</h3>
+            <p>Stream a full desktop environment to your browser via KasmVNC. Run GUI apps, browsers, and IDEs inside your sandbox.</p>
           </div>
-          <ul class="pricing-card__features">
-            <li>2 concurrent sandboxes</li>
-            <li>Browser terminal access</li>
-            <li>SSH access</li>
-            <li>5 snapshots per project</li>
-            <li>Auto backups to cloud</li>
-            <li>Community support</li>
-          </ul>
-          <a href="/register" class="btn btn--outline btn--full">Get Started</a>
+          <button class="roadmap-card__vote" onclick="openVoteModal('Browser Streaming (VNC)')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <span>Vote</span>
+          </button>
         </div>
-
-        <div class="pricing-card pricing-card--featured">
-          <div class="pricing-card__badge">Most Popular</div>
-          <div class="pricing-card__header">
-            <h3>Pro</h3>
-            <div class="pricing-card__price">
-              <span class="pricing-card__amount">$19</span>
-              <span class="pricing-card__period">/month</span>
-            </div>
+        <div class="roadmap-card" data-feature="custom-base-images">
+          <div class="roadmap-card__content">
+            <h3>Custom Base Images</h3>
+            <p>Start sandboxes from your own Docker images. Pre-install your stack, languages, and dependencies.</p>
           </div>
-          <ul class="pricing-card__features">
-            <li>10 concurrent sandboxes</li>
-            <li>Everything in Free</li>
-            <li>Unlimited snapshots</li>
-            <li>Priority spin-up</li>
-            <li>Extended idle timeout</li>
-            <li>Email support</li>
-          </ul>
-          <a href="/register" class="btn btn--primary btn--full">Start Free Trial</a>
+          <button class="roadmap-card__vote" onclick="openVoteModal('Custom Base Images')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <span>Vote</span>
+          </button>
         </div>
-
-        <div class="pricing-card">
-          <div class="pricing-card__header">
-            <h3>Team</h3>
-            <div class="pricing-card__price">
-              <span class="pricing-card__amount">$49</span>
-              <span class="pricing-card__period">/user/month</span>
-            </div>
+        <div class="roadmap-card" data-feature="team-sharing">
+          <div class="roadmap-card__content">
+            <h3>Team Sharing</h3>
+            <p>Share sandbox access with teammates. Collaborative terminal sessions with shared or separate cursors.</p>
           </div>
-          <ul class="pricing-card__features">
-            <li>Unlimited sandboxes</li>
-            <li>Everything in Pro</li>
-            <li>Shared project access</li>
-            <li>Team management</li>
-            <li>Custom base images</li>
-            <li>Dedicated support</li>
-          </ul>
-          <a href="/register" class="btn btn--outline btn--full">Contact Sales</a>
+          <button class="roadmap-card__vote" onclick="openVoteModal('Team Sharing')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <span>Vote</span>
+          </button>
+        </div>
+        <div class="roadmap-card" data-feature="api-sdk">
+          <div class="roadmap-card__content">
+            <h3>API & SDK</h3>
+            <p>Programmatically create and manage sandboxes. Python and TypeScript SDKs for integrating into your own tools.</p>
+          </div>
+          <button class="roadmap-card__vote" onclick="openVoteModal('API & SDK')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <span>Vote</span>
+          </button>
+        </div>
+        <div class="roadmap-card" data-feature="gpu-support">
+          <div class="roadmap-card__content">
+            <h3>GPU Instances</h3>
+            <p>Attach GPUs to sandboxes for ML training, inference, and GPU-accelerated workloads.</p>
+          </div>
+          <button class="roadmap-card__vote" onclick="openVoteModal('GPU Instances')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <span>Vote</span>
+          </button>
+        </div>
+        <div class="roadmap-card" data-feature="multi-cloud">
+          <div class="roadmap-card__content">
+            <h3>Multi-Cloud Support</h3>
+            <p>Deploy on AWS or Azure in addition to GCP. Bring your own cloud account and region.</p>
+          </div>
+          <button class="roadmap-card__vote" onclick="openVoteModal('Multi-Cloud Support')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            <span>Vote</span>
+          </button>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Final CTA -->
-  <section class="cta">
+  <!-- Early Access -->
+  <section class="cta" id="early-access">
     <div class="container">
       <div class="cta__inner">
-        <h2>Ready to ditch local dev setup?</h2>
-        <p>Join hundreds of developers who've moved to cloud sandboxes. Create your first environment in under 30 seconds.</p>
-        <div class="cta__actions">
-          <a href="/register" class="btn btn--primary btn--lg">Create Free Account</a>
-        </div>
-        <p class="cta__note">Free forever plan available. No credit card required.</p>
+        <h2>Get early access.</h2>
+        <p>Pomodex is in active development. Drop your email and we'll reach out when it's ready for you to try.</p>
+        <form class="early-access-form" id="earlyAccessForm" onsubmit="submitEarlyAccess(event)">
+          <input type="email" id="earlyAccessEmail" placeholder="you@example.com" required class="early-access-form__input">
+          <input type="hidden" id="earlyAccessFeature" value="">
+          <button type="submit" class="btn btn--primary btn--lg">Request Access</button>
+        </form>
+        <p class="cta__note" id="earlyAccessStatus">Open source. Self-hosted on your own GCP account.</p>
       </div>
     </div>
   </section>
+
+  <!-- Vote Modal -->
+  <div class="modal-overlay" id="voteModal" style="display:none;">
+    <div class="modal">
+      <button class="modal__close" onclick="closeVoteModal()">&times;</button>
+      <h3>Vote for <span id="voteFeatureName"></span></h3>
+      <p>Enter your email to cast your vote. We'll also add you to the early access list.</p>
+      <form onsubmit="submitVote(event)">
+        <input type="email" id="voteEmail" placeholder="you@example.com" required class="early-access-form__input">
+        <button type="submit" class="btn btn--primary btn--lg" style="width:100%;margin-top:12px;">Vote & Get Early Access</button>
+      </form>
+      <p class="modal__status" id="voteStatus"></p>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer class="footer">
@@ -387,23 +427,20 @@
           <div class="footer__col">
             <h4>Product</h4>
             <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
             <a href="#how-it-works">How It Works</a>
-            <a href="#">Changelog</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#roadmap">Roadmap</a>
           </div>
           <div class="footer__col">
             <h4>Resources</h4>
-            <a href="#">Documentation</a>
-            <a href="#">API Reference</a>
-            <a href="#">Status Page</a>
-            <a href="#">Blog</a>
+            <a href="https://github.com/Bitsy-Chuck/pomodex" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/Bitsy-Chuck/pomodex/blob/main/README.md" target="_blank" rel="noopener">Documentation</a>
+            <a href="https://github.com/Bitsy-Chuck/pomodex/blob/main/docs/architecture.md" target="_blank" rel="noopener">Architecture Docs</a>
           </div>
           <div class="footer__col">
-            <h4>Company</h4>
-            <a href="#">About</a>
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
-            <a href="#">Contact</a>
+            <h4>Contact</h4>
+            <a href="#" id="contactEmailLink" onclick="this.href='mai'+'lto:'+atob('c2luZ2h0ZWphc3Y5QGdtYWlsLmNvbQ==')">Get in Touch</a>
+            <a href="https://github.com/Bitsy-Chuck/pomodex/issues" target="_blank" rel="noopener">Report an Issue</a>
           </div>
         </div>
       </div>
