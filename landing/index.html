@@ -274,24 +274,7 @@
         <p>Double WebSocket proxy keeps sandbox ports off the public internet. Per-sandbox Docker networks provide full isolation.</p>
       </div>
       <div class="architecture-diagram">
-        <pre class="arch-pre">
-Internet
-   |
-   v port 80
-+----------------------------------------------------------+
-|  nginx (sandbox-web)                                     |
-|    /auth, /projects  --> project-service:8000             |
-|    /ws/terminal/*    --> project-service:8000             |
-|                            |                             |
-|                            v  internal WebSocket proxy   |
-|                        terminal-proxy:9000               |
-|                            |                             |
-|                            v  per-sandbox Docker network  |
-|                        ttyd:7681 (inside sandbox)        |
-|                                                          |
-|  postgres:5432 (internal only)                           |
-|  sandbox SSH:22 --> dynamic host port (30000+)           |
-+----------------------------------------------------------+</pre>
+        <img src="images/architecture.png" alt="Pomodex architecture diagram showing nginx reverse proxy routing to internal services with per-sandbox Docker network isolation" class="arch-image">
       </div>
       <div class="tech-grid">
         <div class="tech-item">
