@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Copy host gcloud config to writable location so gcloud can write logs/credentials.db
-cp -r /host-gcloud /tmp/gcloud-config
-export CLOUDSDK_CONFIG=/tmp/gcloud-config
+# Local dev: copy host gcloud config to writable location.
+# GCP VM: metadata server provides credentials automatically.
+if [ -d "/host-gcloud" ]; then
+    cp -r /host-gcloud /tmp/gcloud-config
+    export CLOUDSDK_CONFIG=/tmp/gcloud-config
+fi
 
 # --- JWT Secret ---
 JWT_FILE="/secrets/jwt-secret"

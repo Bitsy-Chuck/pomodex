@@ -141,13 +141,128 @@ docker volume rm pomodex_secrets-data
 docker compose up
 ```
 
-## 10. (Future) GCP Firewall Rules
+## 10. Enable Compute Engine API
 
 ```bash
-gcloud compute firewall-rules create allow-platform \
-    --allow=tcp:22,tcp:8000,tcp:9000,tcp:10000-11000 \
-    --target-tags=sandbox-vm \
-    --description="SSH + Project Service + Terminal Proxy + sandbox SSH ports"
+# Required before creating VMs
+gcloud services enable compute.googleapis.com --project=pomodex-fd2bcd
+```
+
+## 11. Artifact Registry — Platform Images Repo
+
+Separate from the `sandboxes` repo (step 8), this stores the platform service images.
+
+```bash
+# Create a Docker repo for platform service images (project-service, terminal-proxy, agent-sandbox)
+gcloud artifacts repositories create pomodex \
+    --repository-format=docker \
+    --location=europe-west1 \
+    --project=pomodex-fd2bcd
+
+# Authenticate Docker to push/pull from Artifact Registry
+gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+```
+
+## 12. Build & Push Platform Images
+
+```bash
+# Build all 3 service images for linux/amd64 and push to Artifact Registry
+# Images: project-service, terminal-proxy, agent-sandbox
+./scripts/push-images.sh
+```
+
+Pushes to:
+- `europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex/project-service:latest`
+- `europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex/terminal-proxy:latest`
+- `europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex/agent-sandbox:latest`
+
+## 13. Deploy VM
+
+```bash
+# Create a VM, upload files, install Docker, and start all services
+./scripts/deploy-vm.sh <vm-name> [zone]
+# Example:
+./scripts/deploy-vm.sh pomodex-prod europe-west1-b
+```
+
+The deploy script runs these commands under the hood:
+
+```bash
+# Create an Ubuntu VM with Docker-appropriate specs
+# --scopes=cloud-platform gives the VM access to GCP APIs (AR, GCS, IAM)
+# --tags=http-server allows firewall rules to target this VM
+gcloud compute instances create pomodex-prod \
+    --project=pomodex-fd2bcd \
+    --zone=europe-west1-b \
+    --machine-type=e2-medium \
+    --image-family=ubuntu-2404-lts-amd64 \
+    --image-project=ubuntu-os-cloud \
+    --boot-disk-size=30GB \
+    --tags=http-server \
+    --scopes=cloud-platform
+
+# SSH into the VM and install Docker + Docker Compose plugin
+gcloud compute ssh pomodex-prod --zone=europe-west1-b --command="
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq docker.io docker-compose-plugin
+    sudo systemctl enable docker
+    sudo usermod -aG docker \$USER
+"
+
+# Configure Docker on the VM to authenticate with Artifact Registry
+gcloud compute ssh pomodex-prod --zone=europe-west1-b --command="
+    gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+"
+
+# Upload the 3 required files to the VM (no full repo needed)
+gcloud compute scp docker-compose.prod.yml pomodex-prod:~/pomodex/docker-compose.yml --zone=europe-west1-b
+gcloud compute scp scripts/init-gcp-sa.sh pomodex-prod:~/pomodex/scripts/init-gcp-sa.sh --zone=europe-west1-b
+gcloud compute scp .env.prod pomodex-prod:~/pomodex/.env --zone=europe-west1-b
+
+# Pull the sandbox image and tag it locally
+# (project-service spawns sandbox containers by local image tag)
+gcloud compute ssh pomodex-prod --zone=europe-west1-b --command="
+    docker pull europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex/agent-sandbox:latest
+    docker tag europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex/agent-sandbox:latest agent-sandbox:latest
+"
+
+# Start all services
+gcloud compute ssh pomodex-prod --zone=europe-west1-b --command="
+    cd ~/pomodex && docker compose up -d
+"
+```
+
+## 14. Firewall Rules
+
+```bash
+# Allow external traffic to the project-service API on port 8000
+gcloud compute firewall-rules create allow-pomodex \
+    --project=pomodex-fd2bcd \
+    --allow=tcp:8000 \
+    --target-tags=http-server \
+    --source-ranges=0.0.0.0/0
+```
+
+## 15. Common VM Operations
+
+```bash
+# SSH into the VM
+gcloud compute ssh pomodex-prod --zone=europe-west1-b
+
+# View service logs
+gcloud compute ssh pomodex-prod --zone=europe-west1-b -- 'cd ~/pomodex && docker compose logs -f'
+
+# Update running VM with new images
+gcloud compute ssh pomodex-prod --zone=europe-west1-b -- \
+    'cd ~/pomodex && docker compose pull && docker compose up -d'
+
+# Get VM external IP
+gcloud compute instances describe pomodex-prod \
+    --zone=europe-west1-b \
+    --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+
+# Delete VM (destroys all data including postgres volume)
+gcloud compute instances delete pomodex-prod --zone=europe-west1-b
 ```
 
 ## Summary of Service Accounts

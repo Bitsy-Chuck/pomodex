@@ -6,9 +6,6 @@ import '@xterm/xterm/css/xterm.css'
 
 // ttyd 1.7+ protocol uses ASCII character type bytes
 const TTYD_OUTPUT = '0'.charCodeAt(0)           // 48 (server → client)
-const TTYD_SET_WINDOW_TITLE = '1'.charCodeAt(0) // 49
-const TTYD_SET_PREFERENCES = '2'.charCodeAt(0)  // 50
-
 const TTYD_INPUT = '0'.charCodeAt(0)            // 48 (client → server)
 const TTYD_RESIZE = '1'.charCodeAt(0)           // 49
 

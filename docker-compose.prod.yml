@@ -5,7 +5,6 @@ services:
     image: google/cloud-sdk:slim
     volumes:
       - secrets-data:/secrets
-      - ${HOME}/.config/gcloud:/host-gcloud:ro
       - ./scripts:/scripts:ro
     environment:
       GCP_PROJECT: "${GCP_PROJECT:-pomodex-fd2bcd}"
@@ -13,17 +12,15 @@ services:
     entrypoint: ["bash", "/scripts/init-gcp-sa.sh"]
 
   project-service:
-    build: ./backend/project_service
-    ports:
-      - "8000:8000"
+    image: "${AR_PREFIX:-europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex}/project-service:${IMAGE_TAG:-latest}"
     environment:
-      DATABASE_URL: "postgresql+asyncpg://pomodex:pomodex@postgres:5432/sandboxes"
+      DATABASE_URL: "postgresql+asyncpg://pomodex:${POSTGRES_PASSWORD}@postgres:5432/sandboxes"
       GCS_BUCKET: "${GCS_BUCKET:-pomodex-fd2bcd-sandbox}"
       GCP_PROJECT: "${GCP_PROJECT:-pomodex-fd2bcd}"
       GOOGLE_APPLICATION_CREDENTIALS: "/secrets/project-service-sa.json"
-      SANDBOX_IMAGE: "${SANDBOX_IMAGE:-agent-sandbox:latest}"
-      HOST_IP: "${HOST_IP:-localhost}"
-      PROJECT_SERVICE_PORT: "8000"
+      SANDBOX_IMAGE: "agent-sandbox:latest"
+      HOST_IP: "${HOST_IP:-0.0.0.0}"
+      PROJECT_SERVICE_PORT: "80"
       CORS_ORIGINS: "${CORS_ORIGINS:-*}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -42,7 +39,7 @@ services:
     environment:
       POSTGRES_DB: sandboxes
       POSTGRES_USER: pomodex
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-pomodex}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
@@ -55,11 +52,8 @@ services:
     restart: unless-stopped
 
   terminal-proxy:
-    build: ./backend/terminal_proxy
+    image: "${AR_PREFIX:-europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex}/terminal-proxy:${IMAGE_TAG:-latest}"
     container_name: terminal-proxy
-    # No host port mapping — accessed via project-service WebSocket proxy
-    # on platform-net. Direct port mapping breaks on Docker Desktop when
-    # the container joins sandbox networks (docker network connect issue).
     environment:
       PROJECT_SERVICE_URL: "http://project-service:8000"
       PROXY_PORT: "9000"
@@ -76,7 +70,7 @@ services:
     restart: unless-stopped
 
   sandbox-web:
-    build: ./sandbox-web
+    image: "${AR_PREFIX:-europe-west1-docker.pkg.dev/pomodex-fd2bcd/pomodex}/sandbox-web:${IMAGE_TAG:-latest}"
     ports:
       - "80:80"
     networks:

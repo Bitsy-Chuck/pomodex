@@ -1,6 +1,8 @@
 .worktrees/
 secrets/
 .env
+.env.prod
 .venv/
 __pycache__/
 *.pyc
+.DS_Store
