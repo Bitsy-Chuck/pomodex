@@ -1,6 +1,64 @@
 # Pomodex
 
-Cloud sandbox platform — create isolated dev environments with SSH and web terminal access, backed by GCS for persistence.
+Self-hosted cloud sandbox platform. Spin up isolated Ubuntu containers on demand, each with its own SSH access and browser-based terminal. Workspaces persist to GCS automatically. Built for giving AI agents or developers their own disposable dev environments.
+
+## What is this?
+
+Pomodex lets you create isolated sandbox environments from a web UI. Each sandbox is a full Ubuntu 24.04 container with:
+
+- **Browser terminal** — xterm.js in the browser, connected via WebSocket to ttyd inside the container
+- **SSH access** — auto-generated ED25519 keypair per sandbox, connect from any SSH client
+- **Persistent workspace** — `/home/agent` syncs to Google Cloud Storage every 5 minutes via rclone
+- **Snapshot/restore** — save full container state as a Docker image to Artifact Registry, restore later
+- **Pre-installed tools** — Python, Node.js, git, tmux, Claude Code CLI, gcsfuse
+
+## Why?
+
+- **Isolation** — each sandbox runs in its own Docker container with its own network. Sandboxes can't see or interfere with each other.
+- **No port conflicts** — SSH ports are dynamically allocated. Terminal access goes through a WebSocket proxy chain, so only port 80 is exposed externally.
+- **Cheap to run** — a single `e2-medium` GCP VM ($25/mo) can host dozens of concurrent sandboxes. No Kubernetes, no managed container service overhead.
+- **Simple to deploy** — one script (`deploy-vm.sh`) creates a VM, installs Docker, uploads configs, and starts everything. No Terraform, no Ansible.
+- **Automatic backups** — workspace files sync to GCS continuously. If a container dies, the next one restores from the last backup on first boot.
+
+## How Networking Works
+
+Only **port 80** is exposed to the internet. Everything else stays internal.
+
+```
+Internet
+   │
+   ▼ port 80
+┌─────────────────────────────────────────────────────────┐
+│  nginx (sandbox-web)                                    │
+│    /auth, /projects  ──► project-service:8000            │
+│    /ws/terminal/*    ──► project-service:8000             │
+│                            │                             │
+│                            ▼ internal WebSocket proxy    │
+│                        terminal-proxy:9000               │
+│                            │                             │
+│                            ▼ per-sandbox Docker network  │
+│                        ttyd:7681 (inside sandbox)        │
+│                                                         │
+│  postgres:5432 (internal only)                          │
+│  sandbox SSH:22 ──► dynamic host port (30000+)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key design decisions:**
+
+- **Double WebSocket proxy** — browser connects to nginx, which proxies to project-service, which proxies to terminal-proxy, which connects to ttyd inside the sandbox. This keeps terminal-proxy and sandbox ports completely off the public internet.
+- **Per-sandbox networks** — each sandbox gets its own Docker bridge network (`net-{project_id}`). Docker daemon is configured with /24 subnets to support up to ~4,096 concurrent networks.
+- **JWT auth on terminal** — terminal WebSocket connections carry a JWT token as a query param. The terminal-proxy validates it against project-service before proxying to ttyd.
+- **No direct container access** — sandboxes are never port-mapped to the host (except SSH). All HTTP/WebSocket traffic routes through nginx.
+
+## Use Cases
+
+- **AI agent sandboxes** — give each agent its own isolated environment with SSH + terminal access
+- **Disposable dev environments** — spin up a clean Ubuntu box, do your work, snapshot it, tear it down
+- **Teaching/workshops** — provision environments for students with pre-installed tools
+- **CI-adjacent tasks** — run untrusted code in isolated containers with automatic cleanup
+
+---
 
 ## Architecture
 
