@@ -7,17 +7,23 @@ restoration from either snapshot images or GCS backups.
 
 import json
 import logging
-import subprocess
 import time
 from datetime import datetime, timezone
 
 import docker
 from docker.errors import APIError, NotFound
+from google.cloud import artifactregistry_v1
 
 logger = logging.getLogger(__name__)
 
 AR_REGISTRY = "europe-west1-docker.pkg.dev/pomodex-fd2bcd/sandboxes"
+AR_PARENT = "projects/pomodex-fd2bcd/locations/europe-west1/repositories/sandboxes"
 GCS_KEY_PATH_DEFAULT = "secrets/gcs-test-key.json"
+
+
+def _get_ar_client() -> artifactregistry_v1.ArtifactRegistryClient:
+    """Get an Artifact Registry client (uses GOOGLE_APPLICATION_CREDENTIALS)."""
+    return artifactregistry_v1.ArtifactRegistryClient()
 
 
 def _get_client() -> docker.DockerClient:
@@ -249,100 +255,68 @@ def list_snapshots(project_id: str) -> list[dict]:
     Returns sorted list (newest first) of {tag, created_at} dicts.
     Excludes the 'latest' tag.
     """
-    ar_image = f"{AR_REGISTRY}/{project_id}"
+    logger.info("[snapshots] list_snapshots called for project=%s", project_id)
+    ar_client = _get_ar_client()
+    parent = f"{AR_PARENT}/packages/{project_id}"
 
+    logger.info("[snapshots] Listing tags from AR parent=%s", parent)
     try:
-        output = subprocess.check_output(
-            [
-                "gcloud", "artifacts", "docker", "images", "list",
-                ar_image,
-                "--project=pomodex-fd2bcd",
-                "--format=json",
-                "--include-tags",
-            ],
-            text=True,
-            stderr=subprocess.PIPE,
-        )
-    except subprocess.CalledProcessError:
-        return []
+        images = list(ar_client.list_docker_images(
+            request=artifactregistry_v1.ListDockerImagesRequest(parent=AR_PARENT),
+        ))
+    except Exception:
+        logger.exception("[snapshots] Failed to list docker images for %s", project_id)
+        raise
 
-    images = json.loads(output) if output.strip() else []
-    if not images:
-        return []
+    logger.info("[snapshots] AR returned %d image(s) in repository", len(images))
 
+    # Filter to images belonging to this project
+    image_prefix = f"{AR_REGISTRY}/{project_id}"
     snapshots = []
     for img in images:
-        tags = img.get("tags", "")
-        # tags can be a comma-separated string
-        tag_list = [t.strip() for t in tags.split(",") if t.strip()] if isinstance(tags, str) else tags
-        for tag in tag_list:
+        # img.uri is like "europe-west1-docker.pkg.dev/.../sandboxes/project_id@sha256:..."
+        if not img.uri.startswith(image_prefix):
+            continue
+        for tag in img.tags:
             if tag == "latest":
                 continue
-            # Parse timestamp tag format: YYYYMMDD-HHMMSS
             try:
                 created_at = datetime.strptime(tag, "%Y%m%d-%H%M%S").replace(tzinfo=timezone.utc)
                 snapshots.append({"tag": tag, "created_at": created_at})
             except ValueError:
                 continue
 
-    # Sort newest first
     snapshots.sort(key=lambda s: s["created_at"], reverse=True)
+    logger.info("[snapshots] Found %d snapshot(s) for project=%s", len(snapshots), project_id)
     return snapshots
 
 
 def delete_snapshot_images(project_id: str) -> None:
-    """Delete all snapshot images for a project from Artifact Registry.
+    """Delete all snapshot images for a project from Artifact Registry."""
+    ar_client = _get_ar_client()
+    package_name = f"{AR_PARENT}/packages/{project_id}"
 
-    Uses gcloud CLI to list and delete all images under the project's
-    AR path.
-    """
-    ar_image = f"{AR_REGISTRY}/{project_id}"
+    logger.info("[snapshots] Deleting all versions for package=%s", package_name)
 
-    # List all image digests for this project
     try:
-        output = subprocess.check_output(
-            [
-                "gcloud", "artifacts", "docker", "images", "list",
-                ar_image,
-                "--project=pomodex-fd2bcd",
-                "--format=json",
-                "--include-tags",
-            ],
-            text=True,
-            stderr=subprocess.PIPE,
-        )
-    except subprocess.CalledProcessError:
-        logger.info("No images found for %s (already clean)", project_id)
+        versions = list(ar_client.list_versions(
+            request=artifactregistry_v1.ListVersionsRequest(parent=package_name),
+        ))
+    except Exception:
+        logger.exception("[snapshots] Failed to list versions for %s", project_id)
         return
 
-    images = json.loads(output) if output.strip() else []
-    if not images:
-        return
-
-    # Delete each image by its full package path (includes digest)
-    for img in images:
-        # The "package" field is the full AR path, "version" is the digest
-        version = img.get("version", "")
-        if not version:
-            continue
-        image_ref = f"{ar_image}@{version}"
+    for ver in versions:
         try:
-            subprocess.check_call(
-                [
-                    "gcloud", "artifacts", "docker", "images", "delete",
-                    image_ref,
-                    "--project=pomodex-fd2bcd",
-                    "--quiet",
-                    "--delete-tags",
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+            ar_client.delete_version(
+                request=artifactregistry_v1.DeleteVersionRequest(name=ver.name, force=True),
             )
-            logger.info("Deleted %s", image_ref)
-        except subprocess.CalledProcessError as e:
-            logger.warning("Failed to delete %s: %s", image_ref, e)
+            logger.info("[snapshots] Deleted version %s", ver.name)
+        except Exception:
+            logger.warning("[snapshots] Failed to delete version %s", ver.name, exc_info=True)
 
     # Also clean up local images
+    ar_image = f"{AR_REGISTRY}/{project_id}"
     client = _get_client()
     for tag in ["latest", ""]:
         ref = f"{ar_image}:{tag}" if tag else ar_image

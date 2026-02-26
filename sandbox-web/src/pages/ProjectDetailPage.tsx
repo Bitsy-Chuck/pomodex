@@ -39,6 +39,16 @@ export default function ProjectDetailPage() {
     fetchSnapshots()
   }, [id])
 
+  // Poll for status changes while in transitional states
+  useEffect(() => {
+    if (!id || !project) return
+    if (!['snapshotting', 'restoring', 'creating'].includes(project.status)) return
+    const interval = setInterval(() => {
+      getProject(id).then(setProject).catch(() => {})
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [id, project?.status])
+
   function fetchSnapshots() {
     if (!id) return
     setSnapshotsLoading(true)
@@ -159,7 +169,7 @@ export default function ProjectDetailPage() {
             {actionLoading === 'pause' ? 'Pausing...' : 'Pause'}
           </button>
         )}
-        {project.status === 'stopped' && (
+        {(project.status === 'stopped' || project.status === 'error') && (
           <button
             onClick={() => handleStart()}
             disabled={actionLoading !== null}
@@ -231,11 +241,11 @@ export default function ProjectDetailPage() {
                   <td style={{ padding: '8px 12px' }}>
                     <button
                       onClick={() => handleStart(snap.tag)}
-                      disabled={project.status !== 'stopped' || actionLoading !== null}
+                      disabled={!['stopped', 'error'].includes(project.status) || actionLoading !== null}
                       style={{
-                        background: project.status === 'stopped' && !actionLoading ? '#3182ce' : '#cbd5e0',
+                        background: ['stopped', 'error'].includes(project.status) && !actionLoading ? '#3182ce' : '#cbd5e0',
                         color: '#fff', border: 'none', borderRadius: 4,
-                        padding: '4px 12px', cursor: project.status === 'stopped' && !actionLoading ? 'pointer' : 'not-allowed',
+                        padding: '4px 12px', cursor: ['stopped', 'error'].includes(project.status) && !actionLoading ? 'pointer' : 'not-allowed',
                         fontSize: 13,
                       }}
                     >

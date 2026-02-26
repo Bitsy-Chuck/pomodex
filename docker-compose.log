@@ -1,0 +1,354 @@
+time="2026-02-23T00:37:18+05:30" level=warning msg="The \"JWT_SECRET\" variable is not set. Defaulting to a blank string."
+time="2026-02-23T00:37:18+05:30" level=warning msg="/Users/air/Dropbox/air/projects/pomodex/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+#1 [internal] load local bake definitions
+#1 reading from stdin 820B done
+#1 DONE 0.0s
+
+#2 [project-service internal] load build definition from Dockerfile
+#2 transferring dockerfile: 599B done
+#2 DONE 0.0s
+
+#3 [terminal-proxy internal] load build definition from Dockerfile
+#3 transferring dockerfile: 412B done
+#3 DONE 0.0s
+
+#4 [terminal-proxy internal] load metadata for docker.io/library/python:3.11-slim
+#4 DONE 0.0s
+
+#5 [terminal-proxy internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [terminal-proxy 1/5] FROM docker.io/library/python:3.11-slim@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2eafbf
+#6 resolve docker.io/library/python:3.11-slim@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2eafbf done
+#6 DONE 0.0s
+
+#7 [terminal-proxy internal] load build context
+#7 transferring context: 2.37kB done
+#7 DONE 0.0s
+
+#8 [terminal-proxy 3/5] RUN pip install --no-cache-dir     websockets==15.0.1     aiohttp==3.11.*     docker==7.*
+#8 CACHED
+
+#9 [terminal-proxy 4/5] COPY . /app/backend/terminal_proxy/
+#9 CACHED
+
+#10 [terminal-proxy 2/5] WORKDIR /app
+#10 CACHED
+
+#11 [terminal-proxy 5/5] RUN mkdir -p /app/backend && touch /app/backend/__init__.py
+#11 CACHED
+
+#12 [terminal-proxy] exporting to image
+#12 exporting layers done
+#12 exporting manifest sha256:248e7701fa1f5560f7aba2d1e50fa462b0a59442f600b3e371a5db4f4e43684e done
+#12 exporting config sha256:cbc9714a139ea36e45ce5a0a4cff895f28d427ae6b9061a41fd6e76fe5bc12bc done
+#12 exporting attestation manifest sha256:455eb1621f61ff6feacb27e9a1cf2d2dc2f3237ff9924346e32991ccadfe9b79 done
+#12 exporting manifest list sha256:1a8f35ab54f65d44a4ffc326ead827e281a1da09aab43ebed76b8448c8eaa561 done
+#12 naming to docker.io/library/pomodex-terminal-proxy:latest done
+#12 unpacking to docker.io/library/pomodex-terminal-proxy:latest done
+#12 DONE 0.0s
+
+#13 [terminal-proxy] resolving provenance for metadata file
+#13 DONE 0.0s
+
+#14 [project-service internal] load metadata for docker.io/library/python:3.12-slim
+#14 DONE 0.9s
+
+#15 [project-service internal] load .dockerignore
+#15 transferring context: 2B done
+#15 DONE 0.0s
+
+#16 [project-service 1/7] FROM docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab
+#16 resolve docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab done
+#16 DONE 0.0s
+
+#17 [project-service internal] load build context
+#17 transferring context: 4.00kB done
+#17 DONE 0.0s
+
+#18 [project-service 2/7] WORKDIR /app
+#18 CACHED
+
+#19 [project-service 3/7] RUN apt-get update && apt-get install -y --no-install-recommends     gcc libpq-dev &&     rm -rf /var/lib/apt/lists/*
+#19 CACHED
+
+#20 [project-service 4/7] COPY requirements.txt .
+#20 DONE 0.0s
+
+#21 [project-service 5/7] RUN pip install --no-cache-dir -r requirements.txt
+#21 0.796 Collecting fastapi==0.115.0 (from -r requirements.txt (line 1))
+#21 0.861   Downloading fastapi-0.115.0-py3-none-any.whl.metadata (27 kB)
+#21 0.892 Collecting uvicorn==0.30.0 (from uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 0.914   Downloading uvicorn-0.30.0-py3-none-any.whl.metadata (6.3 kB)
+#21 1.048 Collecting sqlalchemy==2.0.35 (from sqlalchemy[asyncio]==2.0.35->-r requirements.txt (line 3))
+#21 1.065   Downloading SQLAlchemy-2.0.35-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (9.6 kB)
+#21 1.106 Collecting asyncpg==0.30.0 (from -r requirements.txt (line 4))
+#21 1.129   Downloading asyncpg-0.30.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (5.0 kB)
+#21 1.178 Collecting pydantic==2.9.0 (from -r requirements.txt (line 5))
+#21 1.199   Downloading pydantic-2.9.0-py3-none-any.whl.metadata (146 kB)
+#21 1.242 Collecting pyjwt==2.9.0 (from -r requirements.txt (line 6))
+#21 1.261   Downloading PyJWT-2.9.0-py3-none-any.whl.metadata (3.0 kB)
+#21 1.290 Collecting bcrypt==4.2.0 (from -r requirements.txt (line 7))
+#21 1.310   Downloading bcrypt-4.2.0-cp39-abi3-manylinux_2_28_aarch64.whl.metadata (9.6 kB)
+#21 1.396 Collecting cryptography==43.0.0 (from -r requirements.txt (line 8))
+#21 1.416   Downloading cryptography-43.0.0-cp39-abi3-manylinux_2_28_aarch64.whl.metadata (5.4 kB)
+#21 1.432 Collecting httpx==0.27.0 (from -r requirements.txt (line 9))
+#21 1.449   Downloading httpx-0.27.0-py3-none-any.whl.metadata (7.2 kB)
+#21 1.468 Collecting google-cloud-iam==2.15.2 (from -r requirements.txt (line 10))
+#21 1.487   Downloading google_cloud_iam-2.15.2-py2.py3-none-any.whl.metadata (5.4 kB)
+#21 1.508 Collecting google-cloud-storage==2.18.2 (from -r requirements.txt (line 11))
+#21 1.527   Downloading google_cloud_storage-2.18.2-py2.py3-none-any.whl.metadata (9.1 kB)
+#21 1.552 Collecting google-auth==2.35.0 (from -r requirements.txt (line 12))
+#21 1.571   Downloading google_auth-2.35.0-py2.py3-none-any.whl.metadata (4.7 kB)
+#21 1.595 Collecting pytest==8.3.0 (from -r requirements.txt (line 13))
+#21 1.614   Downloading pytest-8.3.0-py3-none-any.whl.metadata (7.5 kB)
+#21 1.633 Collecting pytest-asyncio==0.24.0 (from -r requirements.txt (line 14))
+#21 1.652   Downloading pytest_asyncio-0.24.0-py3-none-any.whl.metadata (3.9 kB)
+#21 1.671 Collecting testcontainers==4.8.0 (from testcontainers[postgres]==4.8.0->-r requirements.txt (line 15))
+#21 1.690   Downloading testcontainers-4.8.0-py3-none-any.whl.metadata (7.6 kB)
+#21 1.725 Collecting pyyaml==6.0.2 (from -r requirements.txt (line 16))
+#21 1.744   Downloading PyYAML-6.0.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (2.1 kB)
+#21 1.771 Collecting starlette<0.39.0,>=0.37.2 (from fastapi==0.115.0->-r requirements.txt (line 1))
+#21 1.788   Downloading starlette-0.38.6-py3-none-any.whl.metadata (6.0 kB)
+#21 1.818 Collecting typing-extensions>=4.8.0 (from fastapi==0.115.0->-r requirements.txt (line 1))
+#21 1.835   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+#21 1.853 Collecting click>=7.0 (from uvicorn==0.30.0->uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 1.870   Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+#21 1.888 Collecting h11>=0.8 (from uvicorn==0.30.0->uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 1.906   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#21 1.987 Collecting greenlet!=0.4.17 (from sqlalchemy==2.0.35->sqlalchemy[asyncio]==2.0.35->-r requirements.txt (line 3))
+#21 2.005   Downloading greenlet-3.3.2-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl.metadata (3.7 kB)
+#21 2.021 Collecting annotated-types>=0.4.0 (from pydantic==2.9.0->-r requirements.txt (line 5))
+#21 2.040   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+#21 2.326 Collecting pydantic-core==2.23.2 (from pydantic==2.9.0->-r requirements.txt (line 5))
+#21 2.346   Downloading pydantic_core-2.23.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (6.6 kB)
+#21 2.436 Collecting tzdata (from pydantic==2.9.0->-r requirements.txt (line 5))
+#21 2.463   Downloading tzdata-2025.3-py2.py3-none-any.whl.metadata (1.4 kB)
+#21 2.533 Collecting cffi>=1.12 (from cryptography==43.0.0->-r requirements.txt (line 8))
+#21 2.552   Downloading cffi-2.0.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl.metadata (2.6 kB)
+#21 2.569 Collecting anyio (from httpx==0.27.0->-r requirements.txt (line 9))
+#21 2.588   Downloading anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+#21 2.604 Collecting certifi (from httpx==0.27.0->-r requirements.txt (line 9))
+#21 2.627   Downloading certifi-2026.1.4-py3-none-any.whl.metadata (2.5 kB)
+#21 2.653 Collecting httpcore==1.* (from httpx==0.27.0->-r requirements.txt (line 9))
+#21 2.672   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#21 2.711 Collecting idna (from httpx==0.27.0->-r requirements.txt (line 9))
+#21 2.731   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+#21 2.759 Collecting sniffio (from httpx==0.27.0->-r requirements.txt (line 9))
+#21 2.779   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+#21 2.877 Collecting google-api-core!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 2.896   Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+#21 2.932 Collecting grpc-google-iam-v1<1.0.0dev,>=0.12.4 (from google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 2.952   Downloading grpc_google_iam_v1-0.14.3-py3-none-any.whl.metadata (9.2 kB)
+#21 2.987 Collecting proto-plus<2.0.0dev,>=1.22.3 (from google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 3.006   Downloading proto_plus-1.27.1-py3-none-any.whl.metadata (2.2 kB)
+#21 3.095 Collecting protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<6.0.0dev,>=3.20.2 (from google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 3.115   Downloading protobuf-5.29.6-cp38-abi3-manylinux2014_aarch64.whl.metadata (592 bytes)
+#21 3.160 Collecting google-cloud-core<3.0dev,>=2.3.0 (from google-cloud-storage==2.18.2->-r requirements.txt (line 11))
+#21 3.179   Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+#21 3.203 Collecting google-resumable-media>=2.7.2 (from google-cloud-storage==2.18.2->-r requirements.txt (line 11))
+#21 3.221   Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+#21 3.241 Collecting requests<3.0.0dev,>=2.18.0 (from google-cloud-storage==2.18.2->-r requirements.txt (line 11))
+#21 3.258   Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+#21 3.291 Collecting google-crc32c<2.0dev,>=1.0 (from google-cloud-storage==2.18.2->-r requirements.txt (line 11))
+#21 3.312   Downloading google_crc32c-1.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl.metadata (1.7 kB)
+#21 3.333 Collecting cachetools<6.0,>=2.0.0 (from google-auth==2.35.0->-r requirements.txt (line 12))
+#21 3.351   Downloading cachetools-5.5.2-py3-none-any.whl.metadata (5.4 kB)
+#21 3.371 Collecting pyasn1-modules>=0.2.1 (from google-auth==2.35.0->-r requirements.txt (line 12))
+#21 3.389   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+#21 3.407 Collecting rsa<5,>=3.1.4 (from google-auth==2.35.0->-r requirements.txt (line 12))
+#21 3.425   Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+#21 3.449 Collecting iniconfig (from pytest==8.3.0->-r requirements.txt (line 13))
+#21 3.466   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+#21 3.488 Collecting packaging (from pytest==8.3.0->-r requirements.txt (line 13))
+#21 3.505   Downloading packaging-26.0-py3-none-any.whl.metadata (3.3 kB)
+#21 3.523 Collecting pluggy<2,>=1.5 (from pytest==8.3.0->-r requirements.txt (line 13))
+#21 3.543   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+#21 3.573 Collecting docker (from testcontainers==4.8.0->testcontainers[postgres]==4.8.0->-r requirements.txt (line 15))
+#21 3.601   Downloading docker-7.1.0-py3-none-any.whl.metadata (3.8 kB)
+#21 3.626 Collecting urllib3 (from testcontainers==4.8.0->testcontainers[postgres]==4.8.0->-r requirements.txt (line 15))
+#21 3.646   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+#21 3.719 Collecting wrapt (from testcontainers==4.8.0->testcontainers[postgres]==4.8.0->-r requirements.txt (line 15))
+#21 3.737   Downloading wrapt-2.1.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (7.4 kB)
+#21 3.811 Collecting httptools>=0.5.0 (from uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 3.828   Downloading httptools-0.7.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (3.5 kB)
+#21 3.875 Collecting python-dotenv>=0.13 (from uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 3.894   Downloading python_dotenv-1.2.1-py3-none-any.whl.metadata (25 kB)
+#21 3.920 Collecting uvloop!=0.15.0,!=0.15.1,>=0.14.0 (from uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 3.938   Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (4.9 kB)
+#21 3.977 Collecting watchfiles>=0.13 (from uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 3.996   Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl.metadata (4.9 kB)
+#21 4.037 Collecting websockets>=10.4 (from uvicorn[standard]==0.30.0->-r requirements.txt (line 2))
+#21 4.057   Downloading websockets-16.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (6.8 kB)
+#21 4.075 Collecting pycparser (from cffi>=1.12->cryptography==43.0.0->-r requirements.txt (line 8))
+#21 4.094   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+#21 4.113 Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 4.131   Downloading googleapis_common_protos-1.72.0-py3-none-any.whl.metadata (9.4 kB)
+#21 4.347 Collecting grpcio<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 4.365   Downloading grpcio-1.78.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl.metadata (3.8 kB)
+#21 4.411 Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 4.438   Downloading grpcio_status-1.78.1-py3-none-any.whl.metadata (1.3 kB)
+#21 4.531 Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth==2.35.0->-r requirements.txt (line 12))
+#21 4.550   Downloading pyasn1-0.6.2-py3-none-any.whl.metadata (8.4 kB)
+#21 4.595 Collecting charset_normalizer<4,>=2 (from requests<3.0.0dev,>=2.18.0->google-cloud-storage==2.18.2->-r requirements.txt (line 11))
+#21 4.613   Downloading charset_normalizer-3.4.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl.metadata (37 kB)
+#21 4.672 INFO: pip is looking at multiple versions of grpcio-status to determine which version is compatible with other requirements. This could take a while.
+#21 4.673 Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-cloud-iam==2.15.2->-r requirements.txt (line 10))
+#21 4.700   Downloading grpcio_status-1.78.0-py3-none-any.whl.metadata (1.3 kB)
+#21 4.729   Downloading grpcio_status-1.76.0-py3-none-any.whl.metadata (1.1 kB)
+#21 4.759   Downloading grpcio_status-1.75.1-py3-none-any.whl.metadata (1.1 kB)
+#21 4.788   Downloading grpcio_status-1.75.0-py3-none-any.whl.metadata (1.1 kB)
+#21 4.817   Downloading grpcio_status-1.74.0-py3-none-any.whl.metadata (1.1 kB)
+#21 4.849   Downloading grpcio_status-1.73.1-py3-none-any.whl.metadata (1.1 kB)
+#21 4.899   Downloading grpcio_status-1.73.0-py3-none-any.whl.metadata (1.1 kB)
+#21 4.901 INFO: pip is still looking at multiple versions of grpcio-status to determine which version is compatible with other requirements. This could take a while.
+#21 4.929   Downloading grpcio_status-1.72.2-py3-none-any.whl.metadata (1.1 kB)
+#21 4.959   Downloading grpcio_status-1.72.1-py3-none-any.whl.metadata (1.1 kB)
+#21 4.991   Downloading grpcio_status-1.71.2-py3-none-any.whl.metadata (1.1 kB)
+#21 5.058 Downloading fastapi-0.115.0-py3-none-any.whl (94 kB)
+#21 5.092 Downloading uvicorn-0.30.0-py3-none-any.whl (62 kB)
+#21 5.121 Downloading SQLAlchemy-2.0.35-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (3.2 MB)
+#21 5.234    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 34.1 MB/s eta 0:00:00
+#21 5.255 Downloading asyncpg-0.30.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (3.5 MB)
+#21 5.382    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.5/3.5 MB 29.8 MB/s eta 0:00:00
+#21 5.404 Downloading pydantic-2.9.0-py3-none-any.whl (434 kB)
+#21 5.444 Downloading PyJWT-2.9.0-py3-none-any.whl (22 kB)
+#21 5.467 Downloading bcrypt-4.2.0-cp39-abi3-manylinux_2_28_aarch64.whl (277 kB)
+#21 5.497 Downloading cryptography-43.0.0-cp39-abi3-manylinux_2_28_aarch64.whl (3.8 MB)
+#21 5.599    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.8/3.8 MB 36.5 MB/s eta 0:00:00
+#21 5.621 Downloading httpx-0.27.0-py3-none-any.whl (75 kB)
+#21 5.645 Downloading google_cloud_iam-2.15.2-py2.py3-none-any.whl (209 kB)
+#21 5.675 Downloading google_cloud_storage-2.18.2-py2.py3-none-any.whl (130 kB)
+#21 5.698 Downloading google_auth-2.35.0-py2.py3-none-any.whl (208 kB)
+#21 5.722 Downloading pytest-8.3.0-py3-none-any.whl (341 kB)
+#21 5.747 Downloading pytest_asyncio-0.24.0-py3-none-any.whl (18 kB)
+#21 5.768 Downloading testcontainers-4.8.0-py3-none-any.whl (104 kB)
+#21 5.790 Downloading PyYAML-6.0.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (739 kB)
+#21 5.824    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 739.2/739.2 kB 18.9 MB/s eta 0:00:00
+#21 5.846 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#21 5.868 Downloading pydantic_core-2.23.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.8 MB)
+#21 5.936    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 29.4 MB/s eta 0:00:00
+#21 5.958 Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+#21 5.980 Downloading cachetools-5.5.2-py3-none-any.whl (10 kB)
+#21 6.003 Downloading cffi-2.0.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (220 kB)
+#21 6.029 Downloading click-8.3.1-py3-none-any.whl (108 kB)
+#21 6.053 Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+#21 6.075 Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+#21 6.098 Downloading google_crc32c-1.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (33 kB)
+#21 6.120 Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+#21 6.146 Downloading greenlet-3.3.2-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl (601 kB)
+#21 6.157    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 601.2/601.2 kB 53.6 MB/s eta 0:00:00
+#21 6.182 Downloading grpc_google_iam_v1-0.14.3-py3-none-any.whl (32 kB)
+#21 6.205 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#21 6.230 Downloading httptools-0.7.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (511 kB)
+#21 6.268 Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+#21 6.295 Downloading proto_plus-1.27.1-py3-none-any.whl (50 kB)
+#21 6.321 Downloading protobuf-5.29.6-cp38-abi3-manylinux2014_aarch64.whl (320 kB)
+#21 6.355 Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+#21 6.397 Downloading python_dotenv-1.2.1-py3-none-any.whl (21 kB)
+#21 6.419 Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+#21 6.441 Downloading certifi-2026.1.4-py3-none-any.whl (152 kB)
+#21 6.469 Downloading idna-3.11-py3-none-any.whl (71 kB)
+#21 6.492 Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
+#21 6.518 Downloading starlette-0.38.6-py3-none-any.whl (71 kB)
+#21 6.538 Downloading anyio-4.12.1-py3-none-any.whl (113 kB)
+#21 6.566 Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+#21 6.592 Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+#21 6.620 Downloading uvloop-0.22.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (4.3 MB)
+#21 6.770    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.3/4.3 MB 31.4 MB/s eta 0:00:00
+#21 6.794 Downloading watchfiles-1.1.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (449 kB)
+#21 6.833 Downloading websockets-16.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (186 kB)
+#21 6.863 Downloading docker-7.1.0-py3-none-any.whl (147 kB)
+#21 6.890 Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+#21 6.913 Downloading packaging-26.0-py3-none-any.whl (74 kB)
+#21 6.939 Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+#21 6.963 Downloading tzdata-2025.3-py2.py3-none-any.whl (348 kB)
+#21 6.990 Downloading wrapt-2.1.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (122 kB)
+#21 7.016 Downloading charset_normalizer-3.4.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (148 kB)
+#21 7.054 Downloading googleapis_common_protos-1.72.0-py3-none-any.whl (297 kB)
+#21 7.084 Downloading grpcio-1.78.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (6.5 MB)
+#21 7.274    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.5/6.5 MB 36.2 MB/s eta 0:00:00
+#21 7.295 Downloading grpcio_status-1.71.2-py3-none-any.whl (14 kB)
+#21 7.316 Downloading pyasn1-0.6.2-py3-none-any.whl (83 kB)
+#21 7.337 Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+#21 7.427 Installing collected packages: wrapt, websockets, uvloop, urllib3, tzdata, typing-extensions, sniffio, pyyaml, python-dotenv, pyjwt, pycparser, pyasn1, protobuf, pluggy, packaging, iniconfig, idna, httptools, h11, greenlet, google-crc32c, click, charset_normalizer, certifi, cachetools, bcrypt, asyncpg, annotated-types, uvicorn, sqlalchemy, rsa, requests, pytest, pydantic-core, pyasn1-modules, proto-plus, httpcore, grpcio, googleapis-common-protos, google-resumable-media, cffi, anyio, watchfiles, starlette, pytest-asyncio, pydantic, httpx, grpcio-status, google-auth, docker, cryptography, testcontainers, grpc-google-iam-v1, google-api-core, fastapi, google-cloud-core, google-cloud-storage, google-cloud-iam
+#21 9.305 Successfully installed annotated-types-0.7.0 anyio-4.12.1 asyncpg-0.30.0 bcrypt-4.2.0 cachetools-5.5.2 certifi-2026.1.4 cffi-2.0.0 charset_normalizer-3.4.4 click-8.3.1 cryptography-43.0.0 docker-7.1.0 fastapi-0.115.0 google-api-core-2.30.0 google-auth-2.35.0 google-cloud-core-2.5.0 google-cloud-iam-2.15.2 google-cloud-storage-2.18.2 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.72.0 greenlet-3.3.2 grpc-google-iam-v1-0.14.3 grpcio-1.78.1 grpcio-status-1.71.2 h11-0.16.0 httpcore-1.0.9 httptools-0.7.1 httpx-0.27.0 idna-3.11 iniconfig-2.3.0 packaging-26.0 pluggy-1.6.0 proto-plus-1.27.1 protobuf-5.29.6 pyasn1-0.6.2 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.9.0 pydantic-core-2.23.2 pyjwt-2.9.0 pytest-8.3.0 pytest-asyncio-0.24.0 python-dotenv-1.2.1 pyyaml-6.0.2 requests-2.32.5 rsa-4.9.1 sniffio-1.3.1 sqlalchemy-2.0.35 starlette-0.38.6 testcontainers-4.8.0 typing-extensions-4.15.0 tzdata-2025.3 urllib3-2.6.3 uvicorn-0.30.0 uvloop-0.22.1 watchfiles-1.1.1 websockets-16.0 wrapt-2.1.1
+#21 9.305 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#21 9.383 
+#21 9.383 [notice] A new release of pip is available: 25.0.1 -> 26.0.1
+#21 9.383 [notice] To update, run: pip install --upgrade pip
+#21 DONE 9.8s
+
+#22 [project-service 6/7] COPY . /app/backend/project_service/
+#22 DONE 0.0s
+
+#23 [project-service 7/7] RUN touch /app/backend/__init__.py
+#23 DONE 0.1s
+
+#24 [project-service] exporting to image
+#24 exporting layers
+#24 exporting layers 2.6s done
+#24 exporting manifest sha256:186866218e4c04ba4fc4f0bab238e0721fc9b4d25d67fc076ccf5c983c086249
+#24 exporting manifest sha256:186866218e4c04ba4fc4f0bab238e0721fc9b4d25d67fc076ccf5c983c086249 done
+#24 exporting config sha256:fef268f4425bced5f7af997dc7371ac48ab3ca6d0529220bdfff85cc2fe9c3fd done
+#24 exporting attestation manifest sha256:0d46abc544f8e7c658cecff632efd56072bcee83a8b3fdbe0ac9cf863f6622b0 done
+#24 exporting manifest list sha256:5977f502f3d6075a68705667e0666937d6c95b848019c60dbec790abbc80f9a5 done
+#24 naming to docker.io/library/pomodex-project-service:latest done
+#24 unpacking to docker.io/library/pomodex-project-service:latest
+#24 unpacking to docker.io/library/pomodex-project-service:latest 0.5s done
+#24 DONE 3.1s
+
+#25 [project-service] resolving provenance for metadata file
+#25 DONE 0.0s
+ project-service  Built
+ terminal-proxy  Built
+ Network platform-net  Creating
+ Network platform-net  Created
+ Container pomodex-postgres-1  Creating
+ Container pomodex-postgres-1  Created
+ Container pomodex-project-service-1  Creating
+ Container pomodex-project-service-1  Created
+ Container pomodex-terminal-proxy-1  Creating
+ Container pomodex-terminal-proxy-1  Created
+Attaching to postgres-1, project-service-1, terminal-proxy-1
+postgres-1         | 
+postgres-1         | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres-1         | 
+postgres-1         | 2026-02-22 19:07:33.471 UTC [1] LOG:  starting PostgreSQL 16.12 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+postgres-1         | 2026-02-22 19:07:33.471 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres-1         | 2026-02-22 19:07:33.472 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres-1         | 2026-02-22 19:07:33.475 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres-1         | 2026-02-22 19:07:33.479 UTC [29] LOG:  database system was shut down at 2026-02-22 19:07:18 UTC
+postgres-1         | 2026-02-22 19:07:33.484 UTC [1] LOG:  database system is ready to accept connections
+terminal-proxy-1   | 2026-02-22 19:07:39,231 websockets.server INFO server listening on 0.0.0.0:9000
+terminal-proxy-1   | 2026-02-22 19:07:39,231 __main__ INFO Terminal proxy listening on 0.0.0.0:9000
+project-service-1  | INFO:     Started server process [1]
+project-service-1  | INFO:     Waiting for application startup.
+project-service-1  | INFO:     Application startup complete.
+project-service-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+postgres-1         | 2026-02-22 19:12:33.515 UTC [27] LOG:  checkpoint starting: time
+postgres-1         | 2026-02-22 19:12:39.365 UTC [27] LOG:  checkpoint complete: wrote 59 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=5.828 s, sync=0.008 s, total=5.852 s; sync files=51, longest=0.002 s, average=0.001 s; distance=231 kB, estimate=231 kB; lsn=0/1999BB8, redo lsn=0/1999B80
+project-service-1  | INFO:     192.168.65.1:61093 - "POST /auth/register HTTP/1.1" 201 Created
+project-service-1  | INFO:     192.168.65.1:44133 - "POST /auth/register HTTP/1.1" 201 Created
+project-service-1  | INFO:     192.168.65.1:59308 - "POST /auth/login HTTP/1.1" 200 OK
+project-service-1  | INFO:     192.168.65.1:17573 - "GET /projects HTTP/1.1" 200 OK
+project-service-1  | INFO:     192.168.65.1:17699 - "GET /projects HTTP/1.1" 200 OK
+project-service-1  | 2026-02-22 19:13:31,775 backend.project_service.services.project_service ERROR Failed to create project ddf4bc0b-d5ba-4cc7-b49c-513add019c55: [Errno 21] Is a directory: '/secrets/project-service-sa.json'
+project-service-1  | INFO:     192.168.65.1:36396 - "POST /projects HTTP/1.1" 500 Internal Server Error
+postgres-1         | 2026-02-22 19:17:33.469 UTC [27] LOG:  checkpoint starting: time
+postgres-1         | 2026-02-22 19:17:35.672 UTC [27] LOG:  checkpoint complete: wrote 22 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.190 s, sync=0.005 s, total=2.203 s; sync files=13, longest=0.004 s, average=0.001 s; distance=3 kB, estimate=209 kB; lsn=0/199A988, redo lsn=0/199A950
+[Kterminal-proxy-1 exited with code 143
+project-service-1  | INFO:     Shutting down
+project-service-1  | INFO:     Waiting for application shutdown.
+project-service-1  | INFO:     Application shutdown complete.
+project-service-1  | INFO:     Finished server process [1]
+[Kproject-service-1 exited with code 0
+postgres-1         | 2026-02-22 19:45:35.700 UTC [1] LOG:  received fast shutdown request
+postgres-1         | 2026-02-22 19:45:35.702 UTC [1] LOG:  aborting any active transactions
+postgres-1         | 2026-02-22 19:45:35.704 UTC [1] LOG:  background worker "logical replication launcher" (PID 32) exited with exit code 1
+postgres-1         | 2026-02-22 19:45:35.704 UTC [27] LOG:  shutting down
+postgres-1         | 2026-02-22 19:45:35.706 UTC [27] LOG:  checkpoint starting: shutdown immediate
+postgres-1         | 2026-02-22 19:45:35.713 UTC [27] LOG:  checkpoint complete: wrote 1 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.009 s; sync files=1, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=188 kB; lsn=0/199AA38, redo lsn=0/199AA38
+postgres-1         | 2026-02-22 19:45:35.716 UTC [1] LOG:  database system is shut down
+[Kpostgres-1 exited with code 0
