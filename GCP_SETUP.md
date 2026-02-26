@@ -235,10 +235,10 @@ gcloud compute ssh pomodex-prod --zone=europe-west1-b --command="
 ## 14. Firewall Rules
 
 ```bash
-# Allow external traffic to the project-service API on port 8000
+# Allow HTTP traffic to nginx on port 80 (frontend + API + WebSocket)
 gcloud compute firewall-rules create allow-pomodex \
     --project=pomodex-fd2bcd \
-    --allow=tcp:8000 \
+    --allow=tcp:80 \
     --target-tags=http-server \
     --source-ranges=0.0.0.0/0
 ```
