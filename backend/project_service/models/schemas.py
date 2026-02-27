@@ -1,9 +1,12 @@
 """Pydantic request/response models."""
 
+import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+SNAPSHOT_TAG_RE = re.compile(r"^\d{8}-\d{6}$")
 
 
 # --- Auth ---
@@ -63,6 +66,13 @@ class SnapshotItem(BaseModel):
 
 class RestoreRequest(BaseModel):
     snapshot_tag: str | None = None
+
+    @field_validator("snapshot_tag")
+    @classmethod
+    def validate_snapshot_tag(cls, v: str | None) -> str | None:
+        if v is not None and not SNAPSHOT_TAG_RE.match(v):
+            raise ValueError("snapshot_tag must be in YYYYMMDD-HHMMSS format")
+        return v
 
 # --- Internal ---
 
